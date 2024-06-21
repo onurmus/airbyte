@@ -68,6 +68,7 @@ class NetsuiteStream(HttpStream, ABC):
     def ref_schema(self) -> Mapping[str, str]:
         schema = REFERAL_SCHEMA
         schema["properties"]["links"]["items"] = self.get_schema(REFERAL_SCHEMA_URL)
+        print("test")
         return schema
 
     def get_schema(self, ref: str) -> Union[Mapping[str, Any], str]:
