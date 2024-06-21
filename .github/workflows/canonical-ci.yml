@@ -58,3 +58,27 @@ jobs:
           git fetch main ${MAIN_BRANCH_NAME}
           git checkout main/${MAIN_BRANCH_NAME} -- .github
           git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
+
+  check_connector_version:
+    name: Check connector version
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check connector version changed
+        id: version-check
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          for FILE in $CHANGED_FILES; do
+            if [[ $FILE == *"Dockerfile"* ]]; then
+              if grep -q 'LABEL io.airbyte.version' $FILE; then
+                NEW_VERSION=$(grep 'LABEL io.airbyte.version' $FILE | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
+                BASE_BRANCH=${{ github.base_ref }}
+                git fetch origin $BASE_BRANCH
+                BASE_VERSION=$(git show origin/$BASE_BRANCH:$FILE | grep 'LABEL io.airbyte.version' | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
+                if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
+                  echo "Error: Connector version has not changed in $FILE"
+                  exit 1
+                fi
+              fi
+            fi
+              done
