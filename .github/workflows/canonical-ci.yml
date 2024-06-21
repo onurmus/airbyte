@@ -93,6 +93,7 @@ jobs:
               echo "DOCKERFILE=$DOCKERFILE"
               NEW_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
 
+              echo "BASE_COMMIT=$BASE_COMMIT"
               git checkout $BASE_COMMIT
               BASE_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
 
