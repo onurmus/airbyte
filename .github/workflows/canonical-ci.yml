@@ -97,7 +97,7 @@ jobs:
               BASE_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
 
               # Switch back to the current commit
-              git checkout -
+              git checkout GITHUB_SHA
 
               echo "NEW_VERSION=$NEW_VERSION"
               echo "BASE_VERSION=$BASE_VERSION"
