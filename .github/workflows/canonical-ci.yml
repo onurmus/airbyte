@@ -67,7 +67,7 @@ jobs:
       - name: Check connector version changed
         id: version-check
         run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.head.shabefore }} ${{ github.sha }})
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
           for FILE in $CHANGED_FILES; do
             if [[ $FILE == *"Dockerfile"* ]]; then
               if grep -q 'LABEL io.airbyte.version' $FILE; then
