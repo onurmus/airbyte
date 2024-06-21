@@ -32,7 +32,6 @@ jobs:
         id: changes
         run: |
           BASE_BRANCH=$(git rev-parse HEAD~10)
-
           echo "base branch :: $BASE_BRANCH"
           echo "github SHA is : $GITHUB_SHA"
           CHANGED_DIRS=$(git diff --name-only $BASE_BRANCH $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
