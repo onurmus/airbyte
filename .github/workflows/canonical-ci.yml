@@ -92,8 +92,8 @@ jobs:
               DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
               NEW_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
               BASE_VERSION=$(git show $BASE_COMMIT:$DOCKERFILE | grep 'LABEL io.airbyte.version' | cut -d'=' -f2 | tr -d '" ')
-              echo "NEW_VERSION=$NEW_VERSION""
-              echo "BASE_VERSION=$BASE_VERSION""
+              echo "NEW_VERSION=$NEW_VERSION"
+              echo "BASE_VERSION=$BASE_VERSION"
               if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
                 echo "Error: Connector version has not changed in $DOCKERFILE"
                 exit 1
