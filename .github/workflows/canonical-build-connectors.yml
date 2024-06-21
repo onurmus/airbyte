@@ -31,7 +31,7 @@ jobs:
       - name: Detect changed connectors
         id: changes
         run: |
-          BASE_BRANCH=$(git rev-parse HEAD~2)
+          BASE_BRANCH=$(git rev-parse HEAD~10)
 
           echo "base branch :: $BASE_BRANCH"
           echo "github SHA is : $GITHUB_SHA"
