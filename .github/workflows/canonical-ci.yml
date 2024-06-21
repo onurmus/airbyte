@@ -9,7 +9,7 @@ on:
 
 jobs:
   fail_on_protected_path_changes:
-    name: "Check fork do not change protected paths"
+    name: "Check fork do not change protected paths "
     if: github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     permissions:
