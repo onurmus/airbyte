@@ -64,6 +64,10 @@ jobs:
     if: github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Ensure the full history is fetched
       - name: Check connector version changed
         id: version-check
         run: |
