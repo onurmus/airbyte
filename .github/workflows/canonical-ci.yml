@@ -90,8 +90,15 @@ jobs:
           for DIR in ${{ steps.changes.outputs.dirs }}; do
             if [ -d "airbyte-integrations/connectors/$DIR" ]; then
               DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
+              echo "DOCKERFILE=$DOCKERFILE"
               NEW_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
-              BASE_VERSION=$(git show $BASE_COMMIT:$DOCKERFILE | grep 'LABEL io.airbyte.version' | cut -d'=' -f2 | tr -d '" ')
+
+              git checkout $BASE_COMMIT
+              BASE_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+
+              # Switch back to the current commit
+              git checkout -
+
               echo "NEW_VERSION=$NEW_VERSION"
               echo "BASE_VERSION=$BASE_VERSION"
               if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
