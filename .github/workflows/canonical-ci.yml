@@ -80,6 +80,8 @@ jobs:
           fi
 
           echo "BASE_COMMIT=$BASE_COMMIT"
+          echo "::set-output name=base_commit::$BASE_COMMIT"
+
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connector directories: $CHANGED_DIRS"
           echo "::set-output name=dirs::$CHANGED_DIRS"
@@ -87,6 +89,7 @@ jobs:
       - name: Check connector version
         id: version-check
         run: |
+          BASE_COMMIT=${{ steps.changes.outputs.base_commit }}
           for DIR in ${{ steps.changes.outputs.dirs }}; do
             if [ -d "airbyte-integrations/connectors/$DIR" ]; then
               DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
