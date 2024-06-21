@@ -32,11 +32,13 @@ jobs:
         id: changes
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_BRANCH=$(git rev-parse HEAD~1)
+            BASE_BRANCH=$(git rev-parse HEAD~3)
           else
             BASE_BRANCH=${{ github.event.pull_request.base.sha }}
           fi
 
+          echo "base branch :: $BASE_BRANCH"
+          echo "github SHA is : $GITHUB_SHA"
           CHANGED_DIRS=$(git diff --name-only $BASE_BRANCH $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connector directories: $CHANGED_DIRS"
           echo "::set-output name=dirs::$CHANGED_DIRS"
