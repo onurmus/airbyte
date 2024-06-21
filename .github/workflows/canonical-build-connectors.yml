@@ -31,11 +31,7 @@ jobs:
       - name: Detect changed connectors
         id: changes
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_BRANCH=$(git rev-parse HEAD~3)
-          else
-            BASE_BRANCH=${{ github.event.pull_request.base.sha }}
-          fi
+          BASE_BRANCH=$(git rev-parse HEAD~2)
 
           echo "base branch :: $BASE_BRANCH"
           echo "github SHA is : $GITHUB_SHA"
