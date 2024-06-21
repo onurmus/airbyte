@@ -1,40 +1,22 @@
-name: Build Connectors
+name: Build and Push Connectors
 
 on:
   push:
     branches:
-      - master
       - develop
       - staging
+      - main
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-
-      - name: Determine changed directories
-        id: changes
-        run: |
-          echo "Checking for changes..."
-          CHANGED_DIRS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | cut -d/ -f1 | sort -u)
-          echo "Changed directories: $CHANGED_DIRS"
-          echo "::set-output name=dirs::$CHANGED_DIRS"
-
-      - name: Set environment name
-        id: env
-        run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          if [ "$BRANCH_NAME" == "main" ]; then
-            ENV_NAME="prod"
-          else
-            ENV_NAME="$BRANCH_NAME"
-          fi
-          echo "::set-output name=env_name::$ENV_NAME"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v1
@@ -43,33 +25,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHRC_TOKEN }}
 
-      - name: Get version number for image
-        id: version
+      - name: Detect changed connectors
+        id: changes
         run: |
-          for DIR in ${{ steps.changes.outputs.dirs }}; do
-            if [ -d "$DIR" ]; then
-              # Extract the current version from the Dockerfile
-              CURRENT_VERSION=$(grep 'LABEL io.airbyte.version=' $DIR/Dockerfile | cut -d'=' -f2 | tr -d '"')
-              
-              echo "New version for $DIR: $CURRENT_VERSION"
-              echo "::set-output name=${DIR}_version::$CURRENT_VERSION"
-            fi
-          done
+          CHANGED_DIRS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
+          echo "Changed connector directories: $CHANGED_DIRS"
+          echo "::set-output name=dirs::$CHANGED_DIRS"
 
       - name: Build and push Docker images
         run: |
           for DIR in ${{ steps.changes.outputs.dirs }}; do
-            if [ -d "$DIR" ]; then
-              VERSION=${{ steps.version.outputs.${DIR}_version }}
-              IMAGE_NAME="ghcr.io/onurmus/${DIR}:${VERSION}"
-              ENV_IMAGE_NAME="ghcr.io/onurmus/${DIR}:${{ steps.env.outputs.env_name }}"
+            if [ -d "airbyte-integrations/connectors/$DIR" ]; then
+              DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
+              VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+              NAME=$(grep 'LABEL io.airbyte.name' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+              BRANCH_NAME=${GITHUB_REF#refs/heads/}
 
-              echo "Building Docker image for $DIR with version $VERSION..."
-              docker build -t $IMAGE_NAME -t $ENV_IMAGE_NAME $DIR
+              if [ "$BRANCH_NAME" == "develop" ]; then
+                VERSION="dev-$VERSION"
+              fi
+
+              IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$NAME:$VERSION"
+              echo "Building Docker image for $NAME with version $VERSION..."
+              docker build -t $IMAGE_NAME -f $DOCKERFILE "airbyte-integrations/connectors/$DIR"
               docker push $IMAGE_NAME
-              docker push $ENV_IMAGE_NAME
             fi
           done
-
-      - name: Cleanup Docker images
-        run: docker system prune -f
