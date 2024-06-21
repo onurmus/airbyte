@@ -68,21 +68,34 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Ensure the full history is fetched
-      - name: Check connector version changed
+      - name: Detect changed connectors
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_COMMIT=$(git rev-parse HEAD~3)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BASE_COMMIT=${{ github.event.before }}
+          else
+            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
+          fi
+
+          echo "BASE_COMMIT=$BASE_COMMIT"
+          CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
+          echo "Changed connector directories: $CHANGED_DIRS"
+          echo "::set-output name=dirs::$CHANGED_DIRS"
+
+      - name: Check connector version
         id: version-check
         run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          for FILE in $CHANGED_FILES; do
-            if [[ $FILE == *"Dockerfile"* ]]; then
-              if grep -q 'LABEL io.airbyte.version' $FILE; then
-                NEW_VERSION=$(grep 'LABEL io.airbyte.version' $FILE | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
-                BASE_BRANCH=${{ github.base_ref }}
-                git fetch origin $BASE_BRANCH
-                BASE_VERSION=$(git show origin/$BASE_BRANCH:$FILE | grep 'LABEL io.airbyte.version' | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
-                if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
-                  echo "Error: Connector version has not changed in $FILE"
-                  exit 1
-                fi
+          for DIR in ${{ steps.changes.outputs.dirs }}; do
+            if [ -d "airbyte-integrations/connectors/$DIR" ]; then
+              DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
+              NEW_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+              BASE_VERSION=$(git show $BASE_COMMIT:$DOCKERFILE | grep 'LABEL io.airbyte.version' | cut -d'=' -f2 | tr -d '" ')
+              if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
+                echo "Error: Connector version has not changed in $DOCKERFILE"
+                exit 1
               fi
+              echo "Connector version has changed for $DIR: $BASE_VERSION -> $NEW_VERSION"
             fi
-              done
+          done
