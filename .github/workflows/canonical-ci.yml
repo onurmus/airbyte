@@ -1,11 +1,8 @@
 name: Canonical CI
 
 on:
-  pull_request:
-    branches:
-      - master
-      - dev
-      - staging
+  pull_request_target:
+    types: [opened, synchronize]
 
 jobs:
   fail_on_protected_path_changes:
