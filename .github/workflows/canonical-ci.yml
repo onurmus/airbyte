@@ -9,7 +9,7 @@ on:
 
 jobs:
   fail_on_protected_path_changes:
-    name: "Check fork do not change protected paths"
+    name: "Canonical Check fork do not change protected paths"
     if: github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     permissions:
@@ -31,7 +31,7 @@ jobs:
 
   format_check:
     # IMPORTANT: This name must match the require check name on the branch protection settings
-    name: "Check for formatting errors"
+    name: "Canonical Check for formatting errors"
     if: github.event.pull_request.head.repo.fork == true
     environment: community-ci-auto
     runs-on: community-tooling-test-small
