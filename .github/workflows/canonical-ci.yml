@@ -91,13 +91,13 @@ jobs:
           BASE_COMMIT=${{ steps.changes.outputs.base_commit }}
           for DIR in ${{ steps.changes.outputs.dirs }}; do
             if [ -d "airbyte-integrations/connectors/$DIR" ]; then
-              DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
-              echo "DOCKERFILE=$DOCKERFILE"
-              NEW_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+              METADATAFILE="airbyte-integrations/connectors/$DIR/metadata.yaml"
+              echo "METADATAFILE=$METADATAFILE"
+              NEW_VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
 
               echo "BASE_COMMIT=$BASE_COMMIT"
               git checkout $BASE_COMMIT
-              BASE_VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+              BASE_VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
 
               # Switch back to the current commit
               git checkout $GITHUB_SHA
@@ -105,7 +105,7 @@ jobs:
               echo "NEW_VERSION=$NEW_VERSION"
               echo "BASE_VERSION=$BASE_VERSION"
               if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
-                echo "Error: Connector version has not changed in $DOCKERFILE"
+                echo "Error: Connector version has not changed in $METADATAFILE"
                 exit 1
               fi
               echo "Connector version has changed for $DIR: $BASE_VERSION -> $NEW_VERSION"

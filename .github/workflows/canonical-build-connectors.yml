@@ -42,8 +42,9 @@ jobs:
           for DIR in ${{ steps.changes.outputs.dirs }}; do
             if [ -d "airbyte-integrations/connectors/$DIR" ]; then
               DOCKERFILE="airbyte-integrations/connectors/$DIR/Dockerfile"
-              VERSION=$(grep 'LABEL io.airbyte.version' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
-              NAME=$(grep 'LABEL io.airbyte.name' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
+              METADATAFILE="airbyte-integrations/connectors/$DIR/metadata.yaml"
+              VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+              NAME=$(grep 'dockerRepository' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
               BRANCH_NAME=${GITHUB_REF#refs/heads/}
 
               if [ "$BRANCH_NAME" == "staging" ]; then
@@ -52,7 +53,11 @@ jobs:
 
               IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$NAME:$VERSION"
               echo "Building Docker image for $NAME with version $VERSION..."
-              docker build -t $IMAGE_NAME -f $DOCKERFILE "airbyte-integrations/connectors/$DIR"
-              docker push $IMAGE_NAME
+              if [ -f "$DOCKERFILE" ]; then
+                docker build -t $IMAGE_NAME -f $DOCKERFILE "airbyte-integrations/connectors/$DIR"
+                docker push $IMAGE_NAME
+              else
+                airbyte-ci connectors --name=$DIR build
+              fi
             fi
           done
