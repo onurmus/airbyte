@@ -3,7 +3,6 @@ name: Canonical CI
 on:
   pull_request:
     branches:
-      - develop
       - staging
       - master
 

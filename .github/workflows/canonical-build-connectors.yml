@@ -3,7 +3,6 @@ name: Build and Push Connectors
 on:
   push:
     branches:
-      - develop
       - staging
       - main
   workflow_dispatch:
@@ -47,8 +46,8 @@ jobs:
               NAME=$(grep 'LABEL io.airbyte.name' $DOCKERFILE | cut -d'=' -f2 | tr -d '" ')
               BRANCH_NAME=${GITHUB_REF#refs/heads/}
 
-              if [ "$BRANCH_NAME" == "develop" ]; then
-                VERSION="dev-$VERSION"
+              if [ "$BRANCH_NAME" == "staging" ]; then
+                VERSION="stg-$VERSION"
               fi
 
               IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$NAME:$VERSION"
