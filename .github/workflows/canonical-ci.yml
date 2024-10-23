@@ -1,0 +1,104 @@
+name: Canonical CI
+
+on:
+  pull_request:
+    branches:
+      - master-canonical
+      - master
+
+jobs:
+  fail_on_protected_path_changes:
+    name: "Check fork do not change protected paths "
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check for changes in protected paths
+        id: check_for_changes_in_protected_paths
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            protected_paths:
+              - 'airbyte-ci/**'
+      - name: Fail if changes in protected paths
+        if: steps.check_for_changes_in_protected_paths.outputs.protected_paths == 'true'
+        run: |
+          echo "The fork has changes in protected paths. This is not allowed."
+          exit 1
+  format_check:
+    # IMPORTANT: This name must match the require check name on the branch protection settings
+    name: "Check for formatting errors"
+    if: github.event.pull_request.head.repo.fork == true
+    environment: community-ci-auto
+    runs-on: community-tooling-test-small
+    needs: fail_on_protected_path_changes
+    timeout-minutes: 30
+    env:
+      MAIN_BRANCH_NAME: "master"
+    steps:
+      # This checkouts a fork which can contain untrusted code
+      # It's deemed safe as the formatter are not executing any checked out code
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      # This will sync the .github folder of the main repo with the fork
+      # This allows us to use up to date actions and CI logic from the main repo
+      - name: Pull .github folder and internal packages from main repository
+        id: pull_github_folder
+        run: |
+          git remote add main https://github.com/airbytehq/airbyte.git
+          git fetch main ${MAIN_BRANCH_NAME}
+          git checkout main/${MAIN_BRANCH_NAME} -- .github
+          git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
+  check_connector_version:
+    name: Check connector version
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Ensure the full history is fetched
+      - name: Detect changed connectors
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_COMMIT=$(git rev-parse HEAD~3)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BASE_COMMIT=${{ github.event.before }}
+          else
+            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
+          fi
+          echo "BASE_COMMIT=$BASE_COMMIT"
+          echo "::set-output name=base_commit::$BASE_COMMIT"
+          CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
+          echo "Changed connector directories: $CHANGED_DIRS"
+          echo "::set-output name=dirs::$CHANGED_DIRS"
+      - name: Check connector version
+        id: version-check
+        run: |
+          BASE_COMMIT=${{ steps.changes.outputs.base_commit }}
+          for DIR in ${{ steps.changes.outputs.dirs }}; do
+            if [ -d "airbyte-integrations/connectors/$DIR" ]; then
+              METADATAFILE="airbyte-integrations/connectors/$DIR/metadata.yaml"
+              echo "METADATAFILE=$METADATAFILE"
+              NEW_VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+              echo "BASE_COMMIT=$BASE_COMMIT"
+              git checkout $BASE_COMMIT
+              BASE_VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+              # Switch back to the current commit
+              git checkout $GITHUB_SHA
+              echo "NEW_VERSION=$NEW_VERSION"
+              echo "BASE_VERSION=$BASE_VERSION"
+              if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
+                echo "Error: Connector version has not changed in $METADATAFILE"
+                exit 1
+              fi
+              echo "Connector version has changed for $DIR: $BASE_VERSION -> $NEW_VERSION"
+            fi
+          done
