@@ -137,9 +137,3 @@ runs:
         SLACK_WEBHOOK: ${{ inputs.slack_webhook_url }}
         SPEC_CACHE_BUCKET_NAME: ${{ inputs.spec_cache_bucket_name }}
         SPEC_CACHE_GCS_CREDENTIALS: ${{ inputs.spec_cache_gcs_credentials }}
-    # give the Dagger Engine more time to push cache data to Dagger Cloud
-    - name: Stop Engine
-      id: stop-engine
-      if: always()
-      shell: bash
-      run: docker stop --time 300 $(docker ps --filter name="dagger-engine-*" -q)
