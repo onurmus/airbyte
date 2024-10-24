@@ -56,5 +56,5 @@ jobs:
           done
 
   aibyte-ci:
-    uses: airbytehq/airbyte/.github/workflows/community_ci.yaml@master
+    uses: airbytehq/airbyte/.github/workflows/community_ci.yml@master
     secrets: inherit
