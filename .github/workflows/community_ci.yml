@@ -70,7 +70,7 @@ jobs:
     name: Connectors CI
     needs: determine_runner_environment
     environment: ${{ needs.determine_runner_environment.outputs.environment }}
-    runs-on: ${{ needs.determine_runner_environment.outputs.runner_name }}
+    runs-on: ubuntu-latest
     timeout-minutes: 1440 # 24 hours
     steps:
       - name: Checkout Airbyte
