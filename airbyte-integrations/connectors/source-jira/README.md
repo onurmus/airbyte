@@ -13,6 +13,7 @@ For information about how to use this connector within Airbyte, see [the documen
 ### Installing the connector
 
 From this connector directory, run:
+test change
 
 ```bash
 poetry install --with dev
