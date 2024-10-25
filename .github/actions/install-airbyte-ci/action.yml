@@ -25,12 +25,16 @@ runs:
       shell: bash
       id: determine-install-mode
       run: |
-        if [[ "${{ github.ref }}" != "refs/heads/master" ]] && [[ "${{ steps.changes.outputs.pipelines_any_changed }}" == "true" ]]; then
-          echo "Making changes to Airbyte CI on a non-master branch. Airbyte-CI will be installed from source."
-          echo "install-mode=source" >> $GITHUB_OUTPUT
-        else
-          echo "install-mode=binary" >> $GITHUB_OUTPUT
-        fi
+        echo "Making changes to Airbyte CI on a non-master branch. Airbyte-CI will be installed from source."
+        echo "install-mode=source" >> $GITHUB_OUTPUT
+
+      # run: | TODO: change onur
+      #   if [[ "${{ github.ref }}" != "refs/heads/master" ]] && [[ "${{ steps.changes.outputs.pipelines_any_changed }}" == "true" ]]; then
+      #     echo "Making changes to Airbyte CI on a non-master branch. Airbyte-CI will be installed from source."
+      #     echo "install-mode=source" >> $GITHUB_OUTPUT
+      #   else
+      #     echo "install-mode=binary" >> $GITHUB_OUTPUT
+      #   fi
 
     - name: Install Airbyte CI from binary
       id: install-airbyte-ci-binary
