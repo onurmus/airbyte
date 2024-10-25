@@ -156,7 +156,7 @@ jobs:
           github_token: ${{ github.token }}
           docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          airbyte_ci_binary_url:
+          airbyte_ci_binary_url: https://connectors.airbyte.com/airbyte-ci/releases/ubuntu/latest/airbyte-ci
       - name: Upload pipeline reports
         id: upload-artifact
         uses: actions/upload-artifact@v4
