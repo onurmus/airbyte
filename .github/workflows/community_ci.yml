@@ -29,7 +29,6 @@ jobs:
         with:
           filters: |
             protected_paths:
-              - '.github/**'
               - 'airbyte-ci/**'
 
       - name: Fail if changes in protected paths
