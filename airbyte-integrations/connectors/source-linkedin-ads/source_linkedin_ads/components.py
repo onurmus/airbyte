@@ -20,6 +20,7 @@ from airbyte_cdk.sources.declarative.extractors.record_extractor import RecordEx
 from airbyte_cdk.sources.declarative.incremental import CursorFactory, DatetimeBasedCursor, PerPartitionCursor
 from airbyte_cdk.sources.declarative.interpolation import InterpolatedString
 from airbyte_cdk.sources.declarative.partition_routers import CartesianProductStreamSlicer
+from airbyte_cdk.sources.declarative.partition_routers.partition_router import PartitionRouter
 from airbyte_cdk.sources.declarative.partition_routers.single_partition_router import SinglePartitionRouter
 from airbyte_cdk.sources.declarative.requesters import HttpRequester
 from airbyte_cdk.sources.declarative.requesters.error_handlers import DefaultErrorHandler
@@ -124,6 +125,35 @@ class SafeEncodeHttpRequester(HttpRequester):
 
 
 @dataclass
+class AnalyticsPerPartitionCursor(PerPartitionCursor):
+    """
+    A custom PerPartitionCursor for Ad Analytics streams. Ensures that the state of the partition data is passed to the cursor. 
+    """
+    def __init__(self, cursor_factory: CursorFactory, partition_router: PartitionRouter):
+        super().__init__(cursor_factory, partition_router)
+
+    def generate_slices_from_partition(self, partition: StreamSlice) -> Iterable[StreamSlice]:
+        # Ensure the maximum number of partitions is not exceeded and passes partition info to cursor.
+        self._ensure_partition_limit()
+
+        cursor = self._cursor_per_partition.get(self._to_partition_key(partition.partition))
+        if not cursor:
+            partition_state = (
+                self._state_to_migrate_from
+                if self._state_to_migrate_from
+                else self._NO_CURSOR_STATE
+            )
+            cursor = self._create_cursor(partition_state)
+            self._cursor_per_partition[self._to_partition_key(partition.partition)] = cursor
+
+        cursor.partition = partition
+        for cursor_slice in cursor.stream_slices():
+            yield StreamSlice(
+                partition=partition, cursor_slice=cursor_slice, extra_fields=partition.extra_fields
+            )
+
+
+@dataclass
 class AnalyticsDatetimeBasedCursor(DatetimeBasedCursor):
     """
     A cursor for LinkedIn Ads that chunks requests into smaller groups due to the API's limitation
@@ -189,6 +219,34 @@ class AnalyticsDatetimeBasedCursor(DatetimeBasedCursor):
 
 
 @dataclass
+class CampaignAnalyticsDatetimeBasedCursor(AnalyticsDatetimeBasedCursor):
+    """
+    A cursor for Ad Campaign Analytics streams. Helps to prevent unnecessary API calls.
+    For the Completed campaigns, it considers the runSchedule field. 
+    RunSchedule field contains the information about scheduling of the campaign. 
+    If campaign is completed, we do not have to fetch records after the scheduling day.   
+    """
+
+    def stream_slices(self) -> Iterable[StreamSlice]:
+        # if campaign is completed use runSchedule.end as endDate
+        if self.partition.extra_fields["status"] == "COMPLETED": 
+            if "end" in self.partition.extra_fields["runSchedule"]: 
+                end_datetime = datetime.datetime.fromtimestamp(int(self.partition.extra_fields["runSchedule"]["end"]/1000), tz=self._timezone)  
+            else: # some campaigns may miss scheduling, in this case assume now is the end date.
+                now = datetime.datetime.now(tz=self._timezone)
+                end_datetime = now
+        else:
+            end_datetime = self.select_best_end_datetime()
+        
+        start_datetime = self._calculate_earliest_possible_value(end_datetime)
+
+        if start_datetime < end_datetime: 
+            return self._partition_daterange(start_datetime, end_datetime, self._step)
+        
+        return []
+
+
+@dataclass
 class LinkedInAdsRecordExtractor(RecordExtractor):
     """
     Extracts and transforms LinkedIn Ads records, ensuring that 'lastModified' and 'created'
@@ -240,7 +298,7 @@ class LinkedInAdsCustomRetriever(SimpleRetriever):
             else self.partition_router
         )
 
-        return PerPartitionCursor(
+        return AnalyticsPerPartitionCursor(
             cursor_factory=CursorFactory(
                 lambda: deepcopy(self.stream_slicer),
             ),
