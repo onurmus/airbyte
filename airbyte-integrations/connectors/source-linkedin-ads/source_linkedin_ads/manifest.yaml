@@ -484,6 +484,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -649,6 +650,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -733,6 +735,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -817,6 +820,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -901,6 +905,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -985,6 +990,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -1069,6 +1075,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -1153,6 +1160,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -1237,6 +1245,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -1321,6 +1330,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor
@@ -1406,6 +1416,7 @@ definitions:
               extra_fields:
                 - ["status"]
                 - ["runSchedule"]
+                - ["lastModified"]
       incremental_sync:
         type: CustomIncrementalSync
         class_name: source_linkedin_ads.components.CampaignAnalyticsDatetimeBasedCursor

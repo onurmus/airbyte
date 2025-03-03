@@ -229,12 +229,19 @@ class CampaignAnalyticsDatetimeBasedCursor(AnalyticsDatetimeBasedCursor):
 
     def stream_slices(self) -> Iterable[StreamSlice]:
         # if campaign is completed use runSchedule.end as endDate
-        if self.partition.extra_fields["status"] == "COMPLETED": 
+        campaign_status = self.partition.extra_fields["status"] 
+
+        if campaign_status == "COMPLETED": 
             if "end" in self.partition.extra_fields["runSchedule"]: 
                 end_datetime = datetime.datetime.fromtimestamp(int(self.partition.extra_fields["runSchedule"]["end"]/1000), tz=self._timezone)  
             else: # some campaigns may miss scheduling, in this case assume now is the end date.
                 now = datetime.datetime.now(tz=self._timezone)
                 end_datetime = now
+        elif campaign_status in ["PAUSED", "REMOVED"]:  
+            last_modified_date = self.partition.extra_fields["lastModified"]
+            end_datetime = datetime.datetime.strptime(last_modified_date, "%Y-%m-%dT%H:%M:%S%z")
+        elif campaign_status == "DRAFT":  
+            return []
         else:
             end_datetime = self.select_best_end_datetime()
         
