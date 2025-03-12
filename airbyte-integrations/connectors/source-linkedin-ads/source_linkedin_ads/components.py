@@ -277,7 +277,9 @@ class CampaignAnalyticsDatetimeBasedCursor(AnalyticsDatetimeBasedCursor):
         campaign_current_status = self.partition.extra_fields["status"] 
         campaign_current_motified_time = self.partition.extra_fields["lastModified"] 
         
-        if self.parent_state and "extra" in self.parent_state:
+        if self.parent_state and "extra" in self.parent_state \
+            and "status" in self.parent_state["extra"] \
+            and "lastModified" in self.parent_state["extra"]:
             parent_extras = self.parent_state["extra"]
             campaign_former_status = parent_extras["status"] 
             campaign_former_motified_time = parent_extras["lastModified"] 
