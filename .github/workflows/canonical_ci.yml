@@ -1,0 +1,75 @@
+name: Canonical CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  fail_on_protected_path_changes:
+    name: "Check fork do not change protected paths "
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check for changes in protected paths
+        id: check_for_changes_in_protected_paths
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            protected_paths:
+              - 'airbyte-ci/**'
+      - name: Fail if changes in protected paths
+        if: steps.check_for_changes_in_protected_paths.outputs.protected_paths == 'true'
+        run: |
+          echo "The fork has changes in protected paths. This is not allowed."
+          exit 1
+  
+  check_connector_version:
+    name: Check connector version
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Ensure the full history is fetched
+      - name: Detect changed connectors
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_COMMIT=$(git rev-parse HEAD~3)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BASE_COMMIT=${{ github.event.before }}
+          else
+            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
+          fi
+          echo "BASE_COMMIT=$BASE_COMMIT"
+          echo "::set-output name=base_commit::$BASE_COMMIT"
+          CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
+          echo "Changed connector directories: $CHANGED_DIRS"
+          echo "::set-output name=dirs::$CHANGED_DIRS"
+          
+      - name: Check connector version
+        id: version-check
+        run: |
+          BASE_COMMIT=${{ steps.changes.outputs.base_commit }}
+          for DIR in ${{ steps.changes.outputs.dirs }}; do
+            if [ -d "airbyte-integrations/connectors/$DIR" ]; then
+              METADATAFILE="airbyte-integrations/connectors/$DIR/metadata.yaml"
+              echo "METADATAFILE=$METADATAFILE"
+              NEW_VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+              echo "BASE_COMMIT=$BASE_COMMIT"
+              git checkout $BASE_COMMIT
+              BASE_VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+              # Switch back to the current commit
+              git checkout $GITHUB_SHA
+              echo "NEW_VERSION=$NEW_VERSION"
+              echo "BASE_VERSION=$BASE_VERSION"
+              if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
+                echo "Error: Connector version has not changed in $METADATAFILE. Please check dockerImageTag."
+                exit 1
+              fi
+              echo "Connector version has changed for $DIR: $BASE_VERSION -> $NEW_VERSION"
+            fi
+          done
