@@ -239,7 +239,8 @@ class LinkedInAdsCustomRetriever(SimpleRetriever):
             if isinstance(self.partition_router, list)
             else self.partition_router
         )
-
+        
+        print("I am in initialize cursor.")
         return PerPartitionCursor(
             cursor_factory=CursorFactory(
                 lambda: deepcopy(self.stream_slicer),
