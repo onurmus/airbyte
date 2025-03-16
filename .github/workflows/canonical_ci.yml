@@ -79,7 +79,7 @@ jobs:
     # permissions:
     #   statuses: write
     env:
-      MAIN_BRANCH_NAME: "master"
+      MAIN_BRANCH_NAME: "tmp-ci-test"
 
     steps:
       - name: Checkout fork with full history
