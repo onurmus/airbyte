@@ -118,7 +118,7 @@ jobs:
 
       - name: Test Changed Connectors
         id: test-airbyte-ci
-        run: 
+        run: |
           git checkout -b tmp-ci-test
           airbyte-ci connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
