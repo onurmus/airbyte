@@ -73,7 +73,14 @@ jobs:
     name: Run connectors full CI on fork
     if: github.event.pull_request.head.repo.fork == true
     needs: fail_on_protected_path_changes
+    # environment: community-ci
     runs-on: ubuntu-22.04
+    # timeout-minutes: 180 # 3 hours
+    # permissions:
+    #   statuses: write
+    env:
+      MAIN_BRANCH_NAME: "master"
+
     steps:
       - name: Checkout fork with full history
         uses: actions/checkout@v4
