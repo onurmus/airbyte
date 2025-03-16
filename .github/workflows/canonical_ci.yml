@@ -152,10 +152,12 @@ jobs:
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
-          git checkout -b tmp-ci-test
+          git status
+          git checkout -b $CI_GIT_BRANCH
           echo "branch: $CI_GIT_BRANCH"
           echo "repo: $CI_GIT_REPO_URL"
           echo "revision: $CI_GIT_REVISION"
+          git status
           airbyte-ci --disable-update-check --disable-dagger-run connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
           git checkout $CI_GIT_BRANCH
