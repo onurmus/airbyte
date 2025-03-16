@@ -78,8 +78,8 @@ jobs:
     # timeout-minutes: 180 # 3 hours
     # permissions:
     #   statuses: write
-    env:
-      MAIN_BRANCH_NAME: "tmp-ci-test"
+    # env:
+    #   MAIN_BRANCH_NAME: "tmp-ci-test"
 
     steps:
       - name: Checkout fork with full history
@@ -138,13 +138,14 @@ jobs:
           CI_GIT_BRANCH: ${{ github.head_ref }}
           CI_GIT_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
           CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
           git checkout -b tmp-ci-test
+          echo "branch: $CI_GIT_BRANCH"
+          echo "repo: $CI_GIT_REPO_URL"
+          echo "revision: $CI_GIT_REVISION"
           airbyte-ci --disable-update-check --disable-dagger-run connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
           git checkout $CI_GIT_BRANCH
