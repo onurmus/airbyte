@@ -86,8 +86,8 @@ jobs:
     # timeout-minutes: 180 # 3 hours
     # permissions:
     #   statuses: write
-    # # env:
-    #   MAIN_BRANCH_NAME: "master"
+    env:
+      MAIN_BRANCH_NAME: "master"
 
     steps:
       # This checkouts a fork which can contain untrusted code
@@ -101,13 +101,13 @@ jobs:
 
       # This will sync the .github folder of the main repo with the fork
       # This allows us to use up to date actions and CI logic from the main repo
-      # - name: Pull .github folder from main repository
-      #   id: pull_github_folder
-      #   run: |
-      #     git remote add main https://github.com/airbytehq/airbyte.git
-      #     git fetch main ${MAIN_BRANCH_NAME}
-      #     git checkout main/${MAIN_BRANCH_NAME} -- .github
-      #     git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
+      - name: Pull .github folder from main repository
+        id: pull_github_folder
+        run: |
+          git remote add main https://github.com/onurmus/airbyte.git
+          git fetch main ${MAIN_BRANCH_NAME}
+          git checkout main/${MAIN_BRANCH_NAME} -- .github
+          git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
