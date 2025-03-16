@@ -78,16 +78,26 @@ jobs:
     # timeout-minutes: 180 # 3 hours
     # permissions:
     #   statuses: write
-    # env:
-    #   MAIN_BRANCH_NAME: "tmp-ci-test"
+    env:
+      MAIN_BRANCH_NAME: "master"
 
     steps:
       - name: Checkout fork with full history
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      # This will sync the .github folder of the main repo with the fork
+      # This allows us to use up to date actions and CI logic from the main repo
+      - name: Pull .github folder from main repository
+        id: pull_github_folder
+        run: |
+          git remote add main https://github.com/onurmus/airbyte.git
+          git fetch main ${MAIN_BRANCH_NAME}
+          git checkout main/${MAIN_BRANCH_NAME} -- .github
+          git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
