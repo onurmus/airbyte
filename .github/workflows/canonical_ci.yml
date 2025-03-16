@@ -145,7 +145,7 @@ jobs:
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
           git checkout -b tmp-ci-test
-          airbyte-ci connectors --disable-update-check --disable-dagger-run --modified test --skip-step=qa_checks --skip-step=version_inc_check
+          airbyte-ci --disable-update-check --disable-dagger-run connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
           git checkout $CI_GIT_BRANCH
 
