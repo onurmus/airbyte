@@ -72,6 +72,7 @@ jobs:
               echo "Connector version has changed for $DIR: $BASE_VERSION -> $NEW_VERSION"
             fi
           done
+          
   connectors_full_ci:
     name: Run connectors full CI on fork
     if: github.event.pull_request.head.repo.fork == true
@@ -85,8 +86,8 @@ jobs:
     timeout-minutes: 180 # 3 hours
     permissions:
       statuses: write
-    env:
-      MAIN_BRANCH_NAME: "master"
+    # env:
+    #   MAIN_BRANCH_NAME: "master"
 
     steps:
       # This checkouts a fork which can contain untrusted code
@@ -108,22 +109,34 @@ jobs:
       #     git checkout main/${MAIN_BRANCH_NAME} -- .github
       #     git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
 
-      - name: Run airbyte-ci connectors test
-        # This path refers to the fork .github folder.
-        # We make sure its content is in sync with the main repo .github folder by pulling it in the previous step
-        uses: ./.github/actions/run-airbyte-ci
+      - name: Install Airbyte CI
+        id: install-airbyte-ci
+        uses: ./.github/actions/install-airbyte-ci
         with:
-          context: "pull_request"
-          # docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          # docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          # gcp_gsm_credentials: ${{ secrets.GCP_GSM_CREDENTIALS }}
-          # gcp_integration_tester_credentials: ${{ secrets.GCLOUD_INTEGRATION_TESTER }}
-          # sentry_dsn: ${{ secrets.SENTRY_AIRBYTE_CI_DSN }}
-          git_repo_url: ${{ github.event.pull_request.head.repo.clone_url }}
-          git_branch: ${{ github.head_ref }}
-          git_revision: ${{ github.event.pull_request.head.sha }}
-          # github_token: ${{ secrets.GH_PAT_MAINTENANCE_OSS }}
-          # s3_build_cache_access_key_id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
-          # s3_build_cache_secret_key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
-          subcommand: "connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check"
-          is_fork: "true"
+          airbyte_ci_binary_url: ${{ inputs.airbyte_ci_binary_url }}
+          is_fork: ${{ inputs.is_fork }}
+
+      - name: Test Changed Connectors
+        id: install-airbyte-ci
+        run:
+          airbyte-ci connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
+
+      # - name: Run airbyte-ci connectors test
+      #   # This path refers to the fork .github folder.
+      #   # We make sure its content is in sync with the main repo .github folder by pulling it in the previous step
+      #   uses: ./.github/actions/run-airbyte-ci
+      #   with:
+      #     context: "pull_request"
+      #     # docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      #     # docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
+      #     # gcp_gsm_credentials: ${{ secrets.GCP_GSM_CREDENTIALS }}
+      #     # gcp_integration_tester_credentials: ${{ secrets.GCLOUD_INTEGRATION_TESTER }}
+      #     # sentry_dsn: ${{ secrets.SENTRY_AIRBYTE_CI_DSN }}
+      #     git_repo_url: ${{ github.event.pull_request.head.repo.clone_url }}
+      #     git_branch: ${{ github.head_ref }}
+      #     git_revision: ${{ github.event.pull_request.head.sha }}
+      #     # github_token: ${{ secrets.GH_PAT_MAINTENANCE_OSS }}
+      #     # s3_build_cache_access_key_id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+      #     # s3_build_cache_secret_key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+      #     subcommand: "connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check"
+      #     is_fork: "true"
