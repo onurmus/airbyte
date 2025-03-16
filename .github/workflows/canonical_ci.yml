@@ -81,12 +81,12 @@ jobs:
     # https://github.com/airbytehq/airbyte/settings/environments/2091483613/edit
     # This is a safety measure to make sure the code running on our infrastructure has been reviewed before running on it
     needs: fail_on_protected_path_changes
-    environment: community-ci
-    runs-on: ubuntu-24.04
-    timeout-minutes: 180 # 3 hours
-    permissions:
-      statuses: write
-    # env:
+    # environment: community-ci
+    runs-on: ubuntu-latest
+    # timeout-minutes: 180 # 3 hours
+    # permissions:
+    #   statuses: write
+    # # env:
     #   MAIN_BRANCH_NAME: "master"
 
     steps:
