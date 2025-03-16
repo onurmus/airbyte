@@ -135,7 +135,6 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
           pip install --upgrade setuptools
-          pip install --upgrade distribute
           git checkout -b tmp-ci-test
           airbyte-ci connectors --disable-update-check --disable-dagger-run --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
