@@ -134,9 +134,9 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
-          sudo apt update
-          sudo apt install python3-setuptools -y
-          pip install --upgrade setuptools
+          pip install setuptools
+          git checkout -b tmp-ci-test
+          airbyte-ci connectors --disable-update-check --disable-dagger-run --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
           git checkout $CI_GIT_BRANCH
 
