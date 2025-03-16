@@ -101,13 +101,13 @@ jobs:
 
       # This will sync the .github folder of the main repo with the fork
       # This allows us to use up to date actions and CI logic from the main repo
-      - name: Pull .github folder from main repository
-        id: pull_github_folder
-        run: |
-          git remote add main https://github.com/onurmus/airbyte.git
-          git fetch main ${MAIN_BRANCH_NAME}
-          git checkout main/${MAIN_BRANCH_NAME} -- .github
-          git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
+      # - name: Pull .github folder from main repository
+      #   id: pull_github_folder
+      #   run: |
+      #     git remote add main https://github.com/onurmus/airbyte.git
+      #     git fetch main ${MAIN_BRANCH_NAME}
+      #     git checkout main/${MAIN_BRANCH_NAME} -- .github
+      #     git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
@@ -118,7 +118,9 @@ jobs:
 
       - name: Test Changed Connectors
         id: test-airbyte-ci
-        run: airbyte-ci connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
+        run: 
+          git checkout -b tmp-ci-test
+          airbyte-ci connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
       # - name: Run airbyte-ci connectors test
       #   # This path refers to the fork .github folder.
