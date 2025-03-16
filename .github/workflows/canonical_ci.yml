@@ -120,7 +120,7 @@ jobs:
         id: test-airbyte-ci
         run: |
           git checkout -b tmp-ci-test
-          airbyte-ci connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
+          airbyte-ci connectors --disable-update-check --disable-dagger-run --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
       # - name: Run airbyte-ci connectors test
       #   # This path refers to the fork .github folder.
