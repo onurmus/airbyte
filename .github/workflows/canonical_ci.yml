@@ -117,7 +117,7 @@ jobs:
           is_fork: ${{ inputs.is_fork }}
 
       - name: Test Changed Connectors
-        id: install-airbyte-ci
+        id: test-airbyte-ci
         run: airbyte-ci connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
 
       # - name: Run airbyte-ci connectors test
