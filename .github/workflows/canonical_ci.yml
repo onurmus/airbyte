@@ -105,7 +105,6 @@ jobs:
             BASE_COMMIT=${{ github.event.pull_request.base.sha }}
           fi
           echo "BASE_COMMIT=$BASE_COMMIT"
-          echo "::set-output name=base_commit::$BASE_COMMIT"
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connectors: $CHANGED_DIRS"
           echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
