@@ -99,30 +99,30 @@ jobs:
       #     git checkout main/${MAIN_BRANCH_NAME} -- .github
       #     git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
 
-      # - name: Install Airbyte CI
-      #   id: install-airbyte-ci
-      #   uses: ./.github/actions/install-airbyte-ci
-      #   with:
-      #     airbyte_ci_binary_url: ${{ inputs.airbyte_ci_binary_url }}
-      #     is_fork: ${{ inputs.is_fork }}
-
-      - name: Install Python 3.11
-        id: install-python-3-11
-        uses: actions/setup-python@v4
-        # if: steps.determine-install-mode.outputs.install-mode == 'source'
-        with:
-          python-version: "3.11"
-          token: ${{ inputs.github_token }}
-          cache: "pip"
-          check-latest: true
-          update-environment: true
-
       - name: Install Airbyte CI
-        id: install-airbyte-ci-manual
-        #uses: ./.github/actions/install-airbyte-ci
-        run: |
-          make tools.airbyte-ci.install 
-          make tools.airbyte-ci.check
+        id: install-airbyte-ci
+        uses: ./.github/actions/install-airbyte-ci
+        with:
+          airbyte_ci_binary_url: ${{ inputs.airbyte_ci_binary_url }}
+          is_fork: ${{ inputs.is_fork }}
+
+      # - name: Install Python 3.11
+      #   id: install-python-3-11
+      #   uses: actions/setup-python@v4
+      #   # if: steps.determine-install-mode.outputs.install-mode == 'source'
+      #   with:
+      #     python-version: "3.11"
+      #     token: ${{ inputs.github_token }}
+      #     cache: "pip"
+      #     check-latest: true
+      #     update-environment: true
+
+      # - name: Install Airbyte CI
+      #   id: install-airbyte-ci-manual
+      #   #uses: ./.github/actions/install-airbyte-ci
+      #   run: |
+      #     make tools.airbyte-ci.install 
+      #     make tools.airbyte-ci.check
 
       - name: Detect changed connectors
         id: detect-changes
