@@ -108,7 +108,7 @@ jobs:
           echo "::set-output name=base_commit::$BASE_COMMIT"
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connectors: $CHANGED_DIRS"
-          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
+          echo "::set-output name=dirs::$CHANGED_DIRS"
 
       - name: Detect changed connectors
         id: detect-changes
@@ -169,7 +169,7 @@ jobs:
           echo "Status after checkout"
           git status
 
-          for CONNECTOR in $CONNECTORS_LIST; do
+          for CONNECTOR in ${{ steps.changes.outputs.dirs }}; do
             echo "🔄 Running tests for connector: $CONNECTOR"
             cd airbyte-integrations/connectors/$CONNECTOR
 
