@@ -205,12 +205,14 @@ jobs:
               echo "❌ Error: No commit directory found inside $REPORT_DIR."
               exit 1
           fi
+          echo "Commit dir is $COMMIT_DIR"
 
           # Extract connector name dynamically from the JSON file if available
           OUTPUT_JSON=$(find "$COMMIT_DIR" -mindepth 2 -maxdepth 2 -type f -name "output.json" | head -n 1)
 
           if [[ ! -f "$OUTPUT_JSON" ]]; then
               echo "⚠️ Warning: Test report JSON not found in $COMMIT_DIR, failing build to be safe."
+              ls $COMMIT_DIR
               exit 1
           fi
 
