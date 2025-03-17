@@ -188,8 +188,9 @@ jobs:
               --global-status-check-context='Connectors CI Check' \
               --global-status-check-description='Checking if connectors modified in this PR are ready for release'
 
-          REPORT_DIR=$(find ~/airbyte/airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual -type d -name "*source-linkedin-ads*" | sort | tail -n 1)
-          
+          cd ../../../
+          REPORT_DIR=$(find ./airbyte/airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual -type d -name "*source-linkedin-ads*" | sort | tail -n 1)
+
           OUTPUT_JSON="$REPORT_DIR/source-linkedin-ads/*/output.json"
 
           # Check if the output.json file exists
@@ -210,7 +211,6 @@ jobs:
               echo "⚠️ Warning: Test report JSON not found, failing build to be safe."
               exit 1
           fi
-
 
       # - name: Run airbyte-ci connectors test
       #   # This path refers to the fork .github folder.
