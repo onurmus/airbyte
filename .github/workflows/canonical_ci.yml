@@ -89,15 +89,15 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
 
-      # This will sync the .github folder of the main repo with the fork
-      # This allows us to use up to date actions and CI logic from the main repo
-      - name: Pull .github folder from main repository
-        id: pull_github_folder
-        run: |
-          git remote add main https://github.com/onurmus/airbyte.git
-          git fetch main ${MAIN_BRANCH_NAME}
-          git checkout main/${MAIN_BRANCH_NAME} -- .github
-          git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
+      # # This will sync the .github folder of the main repo with the fork
+      # # This allows us to use up to date actions and CI logic from the main repo
+      # - name: Pull .github folder from main repository
+      #   id: pull_github_folder
+      #   run: |
+      #     git remote add main https://github.com/onurmus/airbyte.git
+      #     git fetch main ${MAIN_BRANCH_NAME}
+      #     git checkout main/${MAIN_BRANCH_NAME} -- .github
+      #     git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
@@ -148,17 +148,24 @@ jobs:
           CI_GIT_BRANCH: ${{ github.head_ref }}
           CI_GIT_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
           CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
+          echo "Status before checkout"
           git status
           git checkout -b $CI_GIT_BRANCH
           echo "branch: $CI_GIT_BRANCH"
           echo "repo: $CI_GIT_REPO_URL"
           echo "revision: $CI_GIT_REVISION"
+          echo "revision: $HEAD_REPO"
+          echo "revision: $HEAD_REF"
+          echo "Status after checkout"
           git status
-          airbyte-ci --disable-update-check --disable-dagger-run connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check
+          cd airbyte-integrations/connectors/source-linkedin-ads
+          airbyte-ci --disable-update-check --disable-dagger-run connectors --name=source-linkedin-ads test
 
           git checkout $CI_GIT_BRANCH
 
