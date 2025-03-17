@@ -189,7 +189,7 @@ jobs:
               --global-status-check-description='Checking if connectors modified in this PR are ready for release'
 
           cd ../../../
-          REPORT_DIR=$(find ./airbyte/airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual -type d -name "*source-linkedin-ads*" | sort | tail -n 1)
+          REPORT_DIR=$(find airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual -type d -name "*source-linkedin-ads*" | sort | tail -n 1)
 
           OUTPUT_JSON="$REPORT_DIR/source-linkedin-ads/*/output.json"
 
