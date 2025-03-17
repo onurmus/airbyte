@@ -183,11 +183,11 @@ jobs:
           echo "Status after checkout"
           git status
           cd airbyte-integrations/connectors/source-linkedin-ads
-          airbyte-ci --disable-update-check --disable-dagger-run connectors --name=source-linkedin-ads test \
+          airbyte-ci --disable-update-check --disable-dagger-run --is-ci connectors --name=source-linkedin-ads test \
               --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation \
               --global-status-check-context='Connectors CI Check' \
               --global-status-check-description='Checking if connectors modified in this PR are ready for release' \
-              --fail-fast	
+              --fail-fast
 
       # - name: Run airbyte-ci connectors test
       #   # This path refers to the fork .github folder.
