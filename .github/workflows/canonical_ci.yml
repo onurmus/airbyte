@@ -166,7 +166,6 @@ jobs:
           CI_GIT_BRANCH: ${{ github.head_ref }}
           CI_GIT_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
           CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-          CI_GITHUB_ACCESS_TOKEN: ${{ secrets.CI_GITHUB_ACCESS_TOKEN }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -184,10 +183,34 @@ jobs:
           echo "Status after checkout"
           git status
           cd airbyte-integrations/connectors/source-linkedin-ads
-          airbyte-ci --disable-update-check --disable-dagger-run --is-ci connectors --name=source-linkedin-ads test \
+          airbyte-ci --disable-update-check --disable-dagger-run connectors --name=source-linkedin-ads test \
               --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation \
               --global-status-check-context='Connectors CI Check' \
-              --global-status-check-description='Checking if connectors modified in this PR are ready for release' \
+              --global-status-check-description='Checking if connectors modified in this PR are ready for release'
+
+          REPORT_DIR=$(find ~/airbyte/airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual -type d -name "*source-linkedin-ads*" | sort | tail -n 1)
+          
+          OUTPUT_JSON="$REPORT_DIR/source-linkedin-ads/*/output.json"
+
+          # Check if the output.json file exists
+          if [[ -f "$OUTPUT_JSON" ]]; then
+              # Extract the success field and failed steps
+              SUCCESS=$(jq -r '.success' "$OUTPUT_JSON")
+              FAILED_STEPS=$(jq -r '.failed_steps[]' "$OUTPUT_JSON")
+
+              if [[ "$SUCCESS" == "false" ]]; then
+                  echo "❌ Connector tests failed."
+                  echo "🚨 Failed steps: $FAILED_STEPS"
+                  echo "📄 Full report: $(jq -r '.html_report_url' "$OUTPUT_JSON")"
+                  exit 1
+              else
+                  echo "✅ All connector tests passed!"
+              fi
+          else
+              echo "⚠️ Warning: Test report JSON not found, failing build to be safe."
+              exit 1
+          fi
+
 
       # - name: Run airbyte-ci connectors test
       #   # This path refers to the fork .github folder.
