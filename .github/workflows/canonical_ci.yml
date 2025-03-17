@@ -164,7 +164,6 @@ jobs:
           pip install --upgrade setuptools
           echo "Status before checkout"
           git status
-          git checkout -b $CI_GIT_BRANCH
           echo "branch: $CI_GIT_BRANCH"
           echo "repo: $CI_GIT_REPO_URL"
           echo "revision: $CI_GIT_REVISION"
