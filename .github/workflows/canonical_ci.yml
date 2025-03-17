@@ -187,7 +187,6 @@ jobs:
               --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation \
               --global-status-check-context='Connectors CI Check' \
               --global-status-check-description='Checking if connectors modified in this PR are ready for release' \
-              --fail-fast
 
       # - name: Run airbyte-ci connectors test
       #   # This path refers to the fork .github folder.
