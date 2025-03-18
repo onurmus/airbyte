@@ -229,7 +229,6 @@ class TestLinkedinAdsStream:
         To resolve this, I manually set and passed these variables as arguments to
         `_next_page_token`, which got the tests to pass, as shown here.
         """
-        assert False
         requests_mock.get(accounts_stream_url, json=response_json)
         test_response = requests.get(accounts_stream_url)
 
