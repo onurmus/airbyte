@@ -35,9 +35,7 @@ jobs:
       - name: Detect changed connectors
         id: changes
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_COMMIT=$(git rev-parse HEAD~5)
-          elif [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
             BASE_COMMIT=${{ github.event.before }}
           else
             BASE_COMMIT=${{ github.event.pull_request.base.sha }}
@@ -76,18 +74,13 @@ jobs:
     if: github.event.pull_request.head.repo.fork == true
     needs: fail_on_protected_path_changes
     runs-on: ubuntu-22.04
-    # env:
-    #   MAIN_BRANCH_NAME: "master"
-
     steps:
-      # This checkouts a fork which can contain untrusted code
-      # It's deemed safe as the community-ci environment requires manual reviewer approval to run
       - name: Checkout fork with full history
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.head_ref }} # Checkout the PR branch, not a detached commit
-          fetch-depth: 0 # Fetch full history
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
@@ -95,51 +88,6 @@ jobs:
         with:
           airbyte_ci_binary_url: ${{ inputs.airbyte_ci_binary_url }}
           is_fork: ${{ inputs.is_fork }}
-
-      - name: Detect changed connectors
-        id: detect-changes
-        env:
-          CI_GIT_BRANCH: ${{ github.head_ref }}
-          CI_GIT_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
-          CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          HEAD_REF: ${{ github.event.pull_request.head.sha }}
-        run: |
-          # Ensure we have the latest commits from the PR branch
-          git fetch origin "$CI_GIT_BRANCH" --depth=50
-          
-          # Ensure we have the exact commit referenced by GITHUB_SHA
-          git fetch origin "$GITHUB_SHA" --depth=1 || echo "⚠️ Warning: Could not fetch GITHUB_SHA, assuming it exists."
-
-          # Determine base commit
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_COMMIT=$(git rev-parse HEAD~5)
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            BASE_COMMIT=${{ github.event.before }}
-          else
-            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
-          fi
-
-          echo "BASE_COMMIT=$BASE_COMMIT"
-          echo "GITHUB_SHA=$GITHUB_SHA"
-
-          # Ensure both commits exist in history
-          git log -n 3 --oneline
-
-          echo "Git status before diff:"
-          git status
-
-          # Detect changed connectors
-          CHANGED_DIRS=$(git diff --name-only "$BASE_COMMIT" "$GITHUB_SHA" | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
-          
-          if [[ -z "$CHANGED_DIRS" ]]; then
-            echo "⚠️ No changed connectors detected. Check if GITHUB_SHA is valid."
-          else
-            echo "Changed connectors: $CHANGED_DIRS"
-          fi
-
-          # Store the changed connectors in environment variable
-          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
 
       - name: Detect changed connectors
         id: detect-changes
@@ -189,17 +137,7 @@ jobs:
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
-          echo "Status before checkout"
-          git status
           git checkout $CI_GIT_BRANCH
-
-          echo "branch: $CI_GIT_BRANCH"
-          echo "repo: $CI_GIT_REPO_URL"
-          echo "revision: $CI_GIT_REVISION"
-          echo "revision: $HEAD_REPO"
-          echo "revision: $HEAD_REF"
-          echo "Status after checkout"
-          git status
 
           for CONNECTOR in $CONNECTORS_LIST; do
             echo "🔄 Running tests for connector: $CONNECTOR"
