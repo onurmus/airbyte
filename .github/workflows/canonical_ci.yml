@@ -109,7 +109,8 @@ jobs:
           echo "BASE_COMMIT=$BASE_COMMIT"
           echo "GITHUB_SHA=$GITHUB_SHA"
           git status
-          git checkout -b $CI_GIT_BRANCH
+          git checkout $CI_GIT_BRANCH
+          git status
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connectors: $CHANGED_DIRS"
           echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
@@ -164,6 +165,8 @@ jobs:
           pip install --upgrade setuptools
           echo "Status before checkout"
           git status
+          git checkout $CI_GIT_BRANCH
+
           echo "branch: $CI_GIT_BRANCH"
           echo "repo: $CI_GIT_REPO_URL"
           echo "revision: $CI_GIT_REVISION"
