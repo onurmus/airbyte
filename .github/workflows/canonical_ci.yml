@@ -98,6 +98,10 @@ jobs:
         id: detect-changes
         env:
           CI_GIT_BRANCH: ${{ github.head_ref }}
+          CI_GIT_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
+          CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BASE_COMMIT=$(git rev-parse HEAD~5)
@@ -109,6 +113,14 @@ jobs:
           echo "BASE_COMMIT=$BASE_COMMIT"
           echo "GITHUB_SHA=$GITHUB_SHA"
           git status
+
+          echo "branch: $CI_GIT_BRANCH"
+          echo "repo: $CI_GIT_REPO_URL"
+          echo "revision: $CI_GIT_REVISION"
+          echo "revision: $HEAD_REPO"
+          echo "revision: $HEAD_REF"
+          echo "Status after checkout"
+
           git checkout $CI_GIT_BRANCH
           git status
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
