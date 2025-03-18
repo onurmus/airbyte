@@ -62,6 +62,8 @@ jobs:
             exit 0
           fi
 
+          sudo apt update
+          sudo apt install python3-setuptools -y
           git checkout $CI_GIT_BRANCH
 
           for CONNECTOR in $CONNECTORS_LIST; do
