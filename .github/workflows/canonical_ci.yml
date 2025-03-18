@@ -85,7 +85,9 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: true
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
@@ -103,6 +105,8 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
+          git fetch --all --prune
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BASE_COMMIT=$(git rev-parse HEAD~5)
           elif [ "${{ github.event_name }}" = "push" ]; then
@@ -119,9 +123,8 @@ jobs:
           echo "revision: $CI_GIT_REVISION"
           echo "revision: $HEAD_REPO"
           echo "revision: $HEAD_REF"
-          echo "Status after checkout"
 
-          git checkout $CI_GIT_BRANCH
+          echo "Status after checkout"
           git status
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connectors: $CHANGED_DIRS"
