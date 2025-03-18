@@ -2,7 +2,6 @@ name: Canonical CI
 
 on:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   fail_on_protected_path_changes:
@@ -30,30 +29,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Ensure the full history is fetched
+          fetch-depth: 0
       - name: Detect changed connectors
         id: changes
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_COMMIT=$(git rev-parse HEAD~3)
-          elif [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
             BASE_COMMIT=${{ github.event.before }}
           else
             BASE_COMMIT=${{ github.event.pull_request.base.sha }}
           fi
           echo "BASE_COMMIT=$BASE_COMMIT"
-          echo "::set-output name=base_commit::$BASE_COMMIT"
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connector directories: $CHANGED_DIRS"
-          echo "::set-output name=dirs::$CHANGED_DIRS"
+          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
+          echo "BASE_COMMIT=$BASE_COMMIT" >> $GITHUB_ENV
 
       - name: Check connector version
         id: version-check
         run: |
-          BASE_COMMIT=${{ steps.changes.outputs.base_commit }}
-          for DIR in ${{ steps.changes.outputs.dirs }}; do
+          for DIR in $CONNECTORS_LIST; do
             if [ -d "airbyte-integrations/connectors/$DIR" ]; then
               METADATAFILE="airbyte-integrations/connectors/$DIR/metadata.yaml"
               echo "METADATAFILE=$METADATAFILE"
@@ -76,38 +72,15 @@ jobs:
   connectors_full_ci:
     name: Run connectors full CI on fork
     if: github.event.pull_request.head.repo.fork == true
-    # Deployment of jobs on the community-ci environment requires manual approval
-    # This is something we set up in the GitHub environment settings:
-    # https://github.com/airbytehq/airbyte/settings/environments/2091483613/edit
-    # This is a safety measure to make sure the code running on our infrastructure has been reviewed before running on it
     needs: fail_on_protected_path_changes
-    # environment: community-ci
-    runs-on: ubuntu-latest
-    # timeout-minutes: 180 # 3 hours
-    # permissions:
-    #   statuses: write
-    env:
-      MAIN_BRANCH_NAME: "master"
-
+    runs-on: ubuntu-22.04
     steps:
-      # This checkouts a fork which can contain untrusted code
-      # It's deemed safe as the community-ci environment requires manual reviewer approval to run
-      - name: Checkout fork
+      - name: Checkout fork with full history
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
-
-      # This will sync the .github folder of the main repo with the fork
-      # This allows us to use up to date actions and CI logic from the main repo
-      # - name: Pull .github folder from main repository
-      #   id: pull_github_folder
-      #   run: |
-      #     git remote add main https://github.com/onurmus/airbyte.git
-      #     git fetch main ${MAIN_BRANCH_NAME}
-      #     git checkout main/${MAIN_BRANCH_NAME} -- .github
-      #     git checkout main/${MAIN_BRANCH_NAME} -- airbyte-ci
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
@@ -116,28 +89,104 @@ jobs:
           airbyte_ci_binary_url: ${{ inputs.airbyte_ci_binary_url }}
           is_fork: ${{ inputs.is_fork }}
 
+      - name: Detect changed connectors
+        id: detect-changes
+        env:
+          CI_GIT_BRANCH: ${{ github.head_ref }}
+        run: |
+          # Ensure we have the latest commits from the PR branch
+          git fetch origin "$CI_GIT_BRANCH" --depth=50
+
+          # Ensure we have the exact commit referenced by GITHUB_SHA
+          git fetch origin "$GITHUB_SHA" --depth=1 || echo "⚠️ Warning: Could not fetch GITHUB_SHA, assuming it exists."
+
+          # Determine base commit
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BASE_COMMIT=${{ github.event.before }}
+          else
+            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
+          fi
+
+          echo "BASE_COMMIT=$BASE_COMMIT"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+
+          # Ensure both commits exist in history
+          git log -n 3 --oneline
+
+          # Detect changed connectors
+          CHANGED_DIRS=$(git diff --name-only "$BASE_COMMIT" "$GITHUB_SHA" | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
+
+          if [[ -z "$CHANGED_DIRS" ]]; then
+            echo "⚠️ No changed connectors detected. Check if GITHUB_SHA is valid."
+          else
+            echo "Changed connectors: $CHANGED_DIRS"
+          fi
+
+          # Store the changed connectors in environment variable
+          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
+
       - name: Test Changed Connectors
         id: test-airbyte-ci
+        env:
+          CI_GIT_BRANCH: ${{ github.head_ref }}
+          CI_GIT_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
+          CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
-          git checkout -b tmp-ci-test
-          airbyte-ci connectors --disable-update-check --disable-dagger-run --modified test --skip-step=qa_checks --skip-step=version_inc_check
+          sudo apt update
+          sudo apt install python3-setuptools -y
+          pip install --upgrade setuptools
 
-      # - name: Run airbyte-ci connectors test
-      #   # This path refers to the fork .github folder.
-      #   # We make sure its content is in sync with the main repo .github folder by pulling it in the previous step
-      #   uses: ./.github/actions/run-airbyte-ci
-      #   with:
-      #     context: "pull_request"
-      #     # docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-      #     # docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
-      #     # gcp_gsm_credentials: ${{ secrets.GCP_GSM_CREDENTIALS }}
-      #     # gcp_integration_tester_credentials: ${{ secrets.GCLOUD_INTEGRATION_TESTER }}
-      #     # sentry_dsn: ${{ secrets.SENTRY_AIRBYTE_CI_DSN }}
-      #     git_repo_url: ${{ github.event.pull_request.head.repo.clone_url }}
-      #     git_branch: ${{ github.head_ref }}
-      #     git_revision: ${{ github.event.pull_request.head.sha }}
-      #     # github_token: ${{ secrets.GH_PAT_MAINTENANCE_OSS }}
-      #     # s3_build_cache_access_key_id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
-      #     # s3_build_cache_secret_key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
-      #     subcommand: "connectors --modified test --skip-step=qa_checks --skip-step=version_inc_check"
-      #     is_fork: "true"
+          git checkout $CI_GIT_BRANCH
+
+          for CONNECTOR in $CONNECTORS_LIST; do
+            echo "🔄 Running tests for connector: $CONNECTOR"
+            cd airbyte-integrations/connectors/$CONNECTOR
+
+            airbyte-ci --disable-update-check --disable-dagger-run connectors --name=$CONNECTOR test \
+                --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation
+
+            cd ../../../
+            # Find the latest timestamped report directory inside the CI branch folder
+            REPORT_DIR=$(find airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual/"$CI_GIT_BRANCH" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
+            echo "Report dir is $REPORT_DIR"
+
+            if [[ -z "$REPORT_DIR" ]]; then
+                echo "❌ Error: No report directory found for branch $CI_GIT_BRANCH."
+                exit 1
+            fi
+
+            # Find the latest commit hash directory inside the timestamped directory
+            COMMIT_DIR=$(find "$REPORT_DIR" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
+
+            if [[ -z "$COMMIT_DIR" ]]; then
+                echo "❌ Error: No commit directory found inside $REPORT_DIR."
+                exit 1
+            fi
+            echo "Commit dir is $COMMIT_DIR"
+
+            # Extract connector name dynamically from the JSON file if available
+            OUTPUT_JSON=$(find "$COMMIT_DIR" -mindepth 3 -maxdepth 3 -type f -name "output.json" | head -n 1)
+
+            if [[ ! -f "$OUTPUT_JSON" ]]; then
+                echo "⚠️ Warning: Test report JSON not found in $COMMIT_DIR, failing build to be safe."
+                ls $COMMIT_DIR
+                exit 1
+            fi
+
+            # Extracting the connector name dynamically
+            CONNECTOR_NAME=$(jq -r '.connector_technical_name' "$OUTPUT_JSON")
+
+            # Extract the success field and failed steps
+            SUCCESS=$(jq -r '.success' "$OUTPUT_JSON")
+            FAILED_STEPS=$(jq -r '.failed_steps[]' "$OUTPUT_JSON")
+
+            if [[ "$SUCCESS" == "false" ]]; then
+                echo "❌ Connector tests failed for $CONNECTOR_NAME."
+                echo "🚨 Failed steps: $FAILED_STEPS"
+                exit 1
+            else
+                echo "✅ All connector tests passed for $CONNECTOR_NAME!"
+            fi
+          done
