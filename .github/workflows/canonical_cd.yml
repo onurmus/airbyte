@@ -86,7 +86,7 @@ jobs:
               echo "from typing import TYPE_CHECKING" >> build_customization.py
               echo "if TYPE_CHECKING:" >> build_customization.py
               echo "    from dagger import Container" >> build_customization.py
-              echo "async def post_connector_install(base_image_container: Container):" > build_customization.py
+              echo "async def post_connector_install(base_image_container):" > build_customization.py
               echo "    HTTP_PROXY = os.environ[\"IMAGE_HTTP_PROXY\"]" >> build_customization.py
               echo "    HTTPS_PROXY = os.environ[\"IMAGE_HTTPS_PROXY\"]" >> build_customization.py
               echo "    return await base_image_container.with_env_variable(\"HTTP_PROXY\", HTTP_PROXY).with_env_variable(\"HTTPS_PROXY\", HTTPS_PROXY)" >> build_customization.py
