@@ -80,14 +80,16 @@ jobs:
     #   MAIN_BRANCH_NAME: "master"
 
     steps:
-      - name: Checkout fork with full history
+      # This checkouts a fork which can contain untrusted code
+      # It's deemed safe as the community-ci environment requires manual reviewer approval to run
+      - name: Checkout full history of fork
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-          fetch-tags: true
-          submodules: true
+          ref: ${{ github.head_ref }} # This ensures the PR branch is checked out
+          fetch-depth: 0 # Fetch full history, avoids detached HEAD state
+          fetch-tags: true # Ensure tags are fetched as well
+          submodules: true # If your project has submodules, this ensures they are fetched
 
       - name: Install Airbyte CI
         id: install-airbyte-ci
