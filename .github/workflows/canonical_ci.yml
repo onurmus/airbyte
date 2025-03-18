@@ -105,8 +105,7 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --all --prune
-
+          # Determine base commit
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BASE_COMMIT=$(git rev-parse HEAD~5)
           elif [ "${{ github.event_name }}" = "push" ]; then
@@ -114,6 +113,7 @@ jobs:
           else
             BASE_COMMIT=${{ github.event.pull_request.base.sha }}
           fi
+
           echo "BASE_COMMIT=$BASE_COMMIT"
           echo "GITHUB_SHA=$GITHUB_SHA"
           git status
@@ -124,10 +124,11 @@ jobs:
           echo "revision: $HEAD_REPO"
           echo "revision: $HEAD_REF"
 
-          echo "Status after checkout"
-          git status
+          # Detect changed connectors
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
           echo "Changed connectors: $CHANGED_DIRS"
+
+          # Store the changed connectors in environment variable
           echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
 
       - name: Detect changed connectors
