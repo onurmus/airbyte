@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure full history
+          fetch-depth: 0 # Ensure full history
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,7 +40,7 @@ jobs:
           BASE_COMMIT=$(git merge-base origin/master HEAD)
           echo "Base commit: $BASE_COMMIT"
           echo "GITHUB_SHA: $GITHUB_SHA"
-          
+
           # Detect changed connectors
           CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
 
@@ -51,14 +51,18 @@ jobs:
             echo "Changed connectors: $CHANGED_DIRS"
             echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
           fi
-          
+
       - name: Build and push Docker images
         id: build-and-push-images
+        env:
+          CI_GIT_BRANCH: ${{ github.head_ref }}
         run: |
           if [[ -z "$CONNECTORS_LIST" ]]; then
             echo "No changed connectors to build. Exiting."
             exit 0
           fi
+
+          git checkout $CI_GIT_BRANCH
 
           for CONNECTOR in $CONNECTORS_LIST; do
             if [ -d "airbyte-integrations/connectors/$CONNECTOR" ]; then
