@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -72,12 +71,18 @@ jobs:
               METADATAFILE="airbyte-integrations/connectors/$CONNECTOR/metadata.yaml"
 
               # Extract metadata
-              VERSION=$(grep 'dockerImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+              VERSION=$(grep 'canonicalImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
               NAME=$(grep 'dockerRepository' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
               IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$NAME:$VERSION"
 
               echo "🚀 Building $CONNECTOR with airbyte-ci..."
               cd airbyte-integrations/connectors/$CONNECTOR
+
+              # If build_customization.py already exists, exit with an error
+              if [[ -f build_customization.py ]]; then
+                echo "❌ Error: build_customization.py already exists in $CONNECTOR! Please edit it and add proxy configuration."
+                exit 1
+              fi
               
               echo "🚀 Setting up proxy configuration for $CONNECTOR..."
 
