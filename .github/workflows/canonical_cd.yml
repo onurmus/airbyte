@@ -35,7 +35,7 @@ jobs:
       - name: Detect changed connectors
         id: detect-changes
         run: |
-          BASE_COMMIT=$(git merge-base origin/master HEAD)
+          BASE_COMMIT=${{ github.event.before }}
           echo "Base commit: $BASE_COMMIT"
           echo "GITHUB_SHA: $GITHUB_SHA"
 
