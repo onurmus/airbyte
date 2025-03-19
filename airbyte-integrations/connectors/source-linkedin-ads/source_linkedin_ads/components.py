@@ -250,7 +250,7 @@ class LinkedInAdsCustomRetriever(SimpleRetriever):
     def stream_slices(self) -> Iterable[Optional[StreamSlice]]:
         """
         Generates stream slices based on the cursor's partitioning.
-        Test commit comment. Another content. xx.
+        Test commit comment. Another content. xx. yy.
         """
         return self.cursor.stream_slices()
 
