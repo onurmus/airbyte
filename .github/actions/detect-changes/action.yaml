@@ -20,7 +20,7 @@ runs:
       shell: bash
       run: |
         echo "Comparing commits: ${{ inputs.base_commit }} -> ${{ inputs.head_commit }}"
-        
+
         # Detect changed connectors
         CHANGED_DIRS=$(git diff --name-only "${{ inputs.base_commit }}" "${{ inputs.head_commit }}" | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
 

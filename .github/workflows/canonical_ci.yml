@@ -121,18 +121,18 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
-          git status
           # install required packages
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
 
           git checkout $CI_GIT_BRANCH
-          
+
           for CONNECTOR in ${{ steps.detect-changes.outputs.connectors_list }}; do
             echo "🔄 Running tests for connector: $CONNECTOR"
             cd airbyte-integrations/connectors/$CONNECTOR
 
+            # Run tests for the connector. Skip the tests which are relevant to upstream repository.
             airbyte-ci --disable-update-check --disable-dagger-run connectors --name=$CONNECTOR test \
                 --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation
 
