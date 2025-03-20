@@ -128,6 +128,8 @@ jobs:
 
           git checkout $CI_GIT_BRANCH
 
+          echo "Detected connectors: ${{ steps.detect-changes.outputs.connectors_list }}"
+
           for CONNECTOR in ${{ steps.detect-changes.outputs.connectors_list }}; do
             echo "🔄 Running tests for connector: $CONNECTOR"
             cd airbyte-integrations/connectors/$CONNECTOR
