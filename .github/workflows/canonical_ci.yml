@@ -110,7 +110,7 @@ jobs:
         uses: ./.github/actions/detect-changes
         with:
           base_commit: ${{ github.event.pull_request.base.sha }}
-          head_commit: ${{ github.sha }}
+          head_commit: ${{ github.event.pull_request.head.sha }}
 
       - name: Test Changed Connectors
         id: test-airbyte-ci
@@ -121,14 +121,15 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
+          git status
           # install required packages
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
 
           git checkout $CI_GIT_BRANCH
-          CONNECTORS_LIST = ${{ steps.detect-changes.outputs.connectors_list }}
-          for CONNECTOR in $CONNECTORS_LIST; do
+          
+          for CONNECTOR in ${{ steps.detect-changes.outputs.connectors_list }}; do
             echo "🔄 Running tests for connector: $CONNECTOR"
             cd airbyte-integrations/connectors/$CONNECTOR
 
