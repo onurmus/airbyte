@@ -1,6 +1,7 @@
 name: Canonical CD
 
 on:
+  pull_request:
   push:
     branches:
       - master
@@ -44,7 +45,7 @@ jobs:
         env:
           CI_GIT_BRANCH: ${{ github.head_ref }}
         run: |
-          if [[ -z "$CONNECTORS_LIST" ]]; then
+          if [[ -z "${{ steps.detect-changes.outputs.connectors_list }}" ]]; then
             echo "No changed connectors to build. Exiting."
             exit 0
           fi
@@ -54,10 +55,7 @@ jobs:
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
 
-          git checkout $CI_GIT_BRANCH
-
-          CONNECTORS_LIST = ${{ steps.detect-changes.outputs.connectors_list }}
-          for CONNECTOR in $CONNECTORS_LIST; do
+          for CONNECTOR in ${{ steps.detect-changes.outputs.connectors_list }}; do
             if [ ! -d "airbyte-integrations/connectors/$CONNECTOR" ]; then
                 echo "⚠️ Warning: Connector directory airbyte-integrations/connectors/$CONNECTOR not found! Skipping..."
                 continue
@@ -81,15 +79,21 @@ jobs:
             
             echo "🚀 Setting up proxy configuration for $CONNECTOR..."
 
-            echo "from __future__ import annotations" > build_customization.py
-            echo "import os" >> build_customization.py
-            echo "from typing import TYPE_CHECKING" >> build_customization.py
-            echo "if TYPE_CHECKING:" >> build_customization.py
-            echo "    from dagger import Container" >> build_customization.py
-            echo "async def post_connector_install(base_image_container):" >> build_customization.py
-            echo "    HTTP_PROXY = os.environ[\"IMAGE_HTTP_PROXY\"]" >> build_customization.py
-            echo "    HTTPS_PROXY = os.environ[\"IMAGE_HTTPS_PROXY\"]" >> build_customization.py
-            echo "    return await base_image_container.with_env_variable(\"HTTP_PROXY\", HTTP_PROXY).with_env_variable(\"HTTPS_PROXY\", HTTPS_PROXY)" >> build_customization.py
+            cat <<EOF > build_customization.py
+            import os
+            async def post_connector_install(base_image_container):
+              return None
+            EOF
+
+            # echo "from __future__ import annotations" > build_customization.py
+            # echo "import os" >> build_customization.py
+            # echo "from typing import TYPE_CHECKING" >> build_customization.py
+            # echo "if TYPE_CHECKING:" >> build_customization.py
+            # echo "    from dagger import Container" >> build_customization.py
+            # echo "async def post_connector_install(base_image_container):" >> build_customization.py
+            # echo "    HTTP_PROXY = os.environ[\"IMAGE_HTTP_PROXY\"]" >> build_customization.py
+            # echo "    HTTPS_PROXY = os.environ[\"IMAGE_HTTPS_PROXY\"]" >> build_customization.py
+            # echo "    return await base_image_container.with_env_variable(\"HTTP_PROXY\", HTTP_PROXY).with_env_variable(\"HTTPS_PROXY\", HTTPS_PROXY)" >> build_customization.py
 
             echo "✅ build_customization.py created successfully."
 
