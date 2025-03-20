@@ -11,15 +11,27 @@ jobs:
     permissions:
       pull-requests: read
     steps:
+      - name: Get list of changed files
+        id: changed-files
+        uses: canonical/actions/changed-files@main
       - name: Check for changes in protected paths
-        id: check_for_changes_in_protected_paths
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            protected_paths:
-              - 'airbyte-ci/**'
+        id: check-for-protected-paths
+        run: |
+          PROTECTED_PATHS=("airbyte-ci/" ".github/workflows/")
+          CHANGED_FILES="${{ steps.changed-files.outputs.changed-files }}"
+
+          echo "Changed files: $CHANGED_FILES"
+          echo "$CHANGED_FILES" | tr ' ' '\n' > changed_files.txt
+
+          for path in "${PROTECTED_PATHS[@]}"; do
+            if grep -q "^$path" changed_files.txt; then
+              echo "PROTECTED_PATH_CHANGED=true" >> $GITHUB_ENV
+              break
+            fi
+          done
+          echo "PROTECTED_PATH_CHANGED=${PROTECTED_PATH_CHANGED:-false}" >> $GITHUB_ENV
       - name: Fail if changes in protected paths
-        if: steps.check_for_changes_in_protected_paths.outputs.protected_paths == 'true'
+        if: env.PROTECTED_PATH_CHANGED == 'true'
         run: |
           echo "The fork has changes in protected paths. This is not allowed."
           exit 1
@@ -134,6 +146,7 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
+          # install required packages
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
