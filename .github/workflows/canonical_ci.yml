@@ -5,7 +5,7 @@ on:
 
 jobs:
   fail_on_protected_path_changes:
-    name: "Check fork do not change protected paths "
+    name: "Check fork does not change protected paths"
     if: github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     permissions:
@@ -107,39 +107,10 @@ jobs:
 
       - name: Detect changed connectors
         id: detect-changes
-        env:
-          CI_GIT_BRANCH: ${{ github.head_ref }}
-        run: |
-          # Ensure we have the latest commits from the PR branch
-          git fetch origin "$CI_GIT_BRANCH" --depth=50
-
-          # Ensure we have the exact commit referenced by GITHUB_SHA
-          git fetch origin "$GITHUB_SHA" --depth=1 || echo "⚠️ Warning: Could not fetch GITHUB_SHA, assuming it exists."
-
-          # Determine base commit
-          if [ "${{ github.event_name }}" = "push" ]; then
-            BASE_COMMIT=${{ github.event.before }}
-          else
-            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
-          fi
-
-          echo "BASE_COMMIT=$BASE_COMMIT"
-          echo "GITHUB_SHA=$GITHUB_SHA"
-
-          # Ensure both commits exist in history
-          git log -n 3 --oneline
-
-          # Detect changed connectors
-          CHANGED_DIRS=$(git diff --name-only "$BASE_COMMIT" "$GITHUB_SHA" | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
-
-          if [[ -z "$CHANGED_DIRS" ]]; then
-            echo "⚠️ No changed connectors detected. Check if GITHUB_SHA is valid."
-          else
-            echo "Changed connectors: $CHANGED_DIRS"
-          fi
-
-          # Store the changed connectors in environment variable
-          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
+        uses: ./.github/actions/detect-changes
+        with:
+          base_commit: ${{ github.event.pull_request.base.sha }}
+          head_commit: ${{ github.sha }}
 
       - name: Test Changed Connectors
         id: test-airbyte-ci
@@ -156,7 +127,7 @@ jobs:
           pip install --upgrade setuptools
 
           git checkout $CI_GIT_BRANCH
-
+          CONNECTORS_LIST = ${{ steps.detect-changes.outputs.connectors_list }}
           for CONNECTOR in $CONNECTORS_LIST; do
             echo "🔄 Running tests for connector: $CONNECTOR"
             cd airbyte-integrations/connectors/$CONNECTOR
