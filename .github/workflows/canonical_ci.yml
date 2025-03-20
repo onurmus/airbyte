@@ -11,6 +11,10 @@ jobs:
     permissions:
       pull-requests: read
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Get list of changed files
         id: changed-files
         uses: canonical/actions/changed-files@main
