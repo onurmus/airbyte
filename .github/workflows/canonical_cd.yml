@@ -78,6 +78,7 @@ jobs:
               exit 1
             fi
             
+            chmod +x .github/scripts/generate_build_customizations.sh
             .github/scripts/generate_build_customizations.sh $CONNECTOR
 
             cd airbyte-integrations/connectors/$CONNECTOR
