@@ -34,28 +34,17 @@ jobs:
 
       - name: Detect changed connectors
         id: detect-changes
-        run: |
-          BASE_COMMIT=${{ github.event.before }}
-          echo "Base commit: $BASE_COMMIT"
-          echo "GITHUB_SHA: $GITHUB_SHA"
-
-          # Detect changed connectors
-          CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
-
-          if [[ -z "$CHANGED_DIRS" ]]; then
-            echo "No changed connectors detected."
-            echo "CONNECTORS_LIST=" >> $GITHUB_ENV
-          else
-            echo "Changed connectors: $CHANGED_DIRS"
-            echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
-          fi
+        uses: ./.github/actions/detect-changes
+        with:
+          base_commit: ${{ github.event.before }}
+          head_commit: ${{ github.sha }}
 
       - name: Build and push Docker images
         id: build-and-push-images
         env:
           CI_GIT_BRANCH: ${{ github.head_ref }}
         run: |
-          if [[ -z "$CONNECTORS_LIST" ]]; then
+          if [[ -z "${{ steps.detect-changes.outputs.connectors_list }}" ]]; then
             echo "No changed connectors to build. Exiting."
             exit 0
           fi
@@ -65,62 +54,49 @@ jobs:
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
 
-          git checkout $CI_GIT_BRANCH
-
-          for CONNECTOR in $CONNECTORS_LIST; do
-            if [ -d "airbyte-integrations/connectors/$CONNECTOR" ]; then
-              METADATAFILE="airbyte-integrations/connectors/$CONNECTOR/metadata.yaml"
-
-              # Extract metadata
-              VERSION=$(grep 'canonicalImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
-              NAME=$(grep 'dockerRepository' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
-              IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$NAME:$VERSION"
-
-              echo "🚀 Building $CONNECTOR with airbyte-ci..."
-              cd airbyte-integrations/connectors/$CONNECTOR
-
-              # If build_customization.py already exists, exit with an error
-              if [[ -f build_customization.py ]]; then
-                echo "❌ Error: build_customization.py already exists in $CONNECTOR! Please edit it and add proxy configuration."
-                exit 1
-              fi
-              
-              echo "🚀 Setting up proxy configuration for $CONNECTOR..."
-
-              echo "from __future__ import annotations" > build_customization.py
-              echo "import os" >> build_customization.py
-              echo "from typing import TYPE_CHECKING" >> build_customization.py
-              echo "if TYPE_CHECKING:" >> build_customization.py
-              echo "    from dagger import Container" >> build_customization.py
-              echo "async def post_connector_install(base_image_container):" >> build_customization.py
-              echo "    HTTP_PROXY = os.environ[\"IMAGE_HTTP_PROXY\"]" >> build_customization.py
-              echo "    HTTPS_PROXY = os.environ[\"IMAGE_HTTPS_PROXY\"]" >> build_customization.py
-              echo "    return await base_image_container.with_env_variable(\"HTTP_PROXY\", HTTP_PROXY).with_env_variable(\"HTTPS_PROXY\", HTTPS_PROXY)" >> build_customization.py
-
-              echo "✅ build_customization.py created successfully."
-
-              cat build_customization.py
-
-              # Set proxy environment variables
-              export IMAGE_HTTP_PROXY=http://squid.internal:3128
-              export IMAGE_HTTPS_PROXY=http://squid.internal:3128
-
-              # Build image using airbyte-ci
-              airbyte-ci connectors --name=$CONNECTOR build
-              
-              # Ensure the dev-tagged image exists before pushing
-              DEV_IMAGE="airbyte/$CONNECTOR:dev"
-              if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "$DEV_IMAGE"; then
-                echo "✅ Found built image: $DEV_IMAGE"
-                docker tag "$DEV_IMAGE" "$IMAGE_NAME"
-                docker push "$IMAGE_NAME"
-              else
-                echo "❌ Error: Image $DEV_IMAGE was not found after build."
-                exit 1
-              fi
-
-              cd ../../../
-            else
-              echo "⚠️ Warning: Connector directory airbyte-integrations/connectors/$CONNECTOR not found!"
+          for CONNECTOR in ${{ steps.detect-changes.outputs.connectors_list }}; do
+            if [ ! -d "airbyte-integrations/connectors/$CONNECTOR" ]; then
+                echo "⚠️ Warning: Connector directory airbyte-integrations/connectors/$CONNECTOR not found! Skipping..."
+                continue
             fi
+            
+            METADATAFILE="airbyte-integrations/connectors/$CONNECTOR/metadata.yaml"
+
+            # Extract metadata
+            VERSION=$(grep 'canonicalImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+            NAME=$(grep 'dockerRepository' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
+            IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$NAME:$VERSION"
+
+            echo "🚀 Building $CONNECTOR with airbyte-ci..."
+            
+            # If build_customization.py already exists, exit with an error
+            if [[ -f build_customization.py ]]; then
+              echo "❌ Error: build_customization.py already exists in $CONNECTOR! Please edit it and add proxy configuration."
+              exit 1
+            fi
+            
+            .github/scripts/generate_build_customizations.sh $CONNECTOR
+
+            cd airbyte-integrations/connectors/$CONNECTOR
+
+            # Set proxy environment variables
+            export IMAGE_HTTP_PROXY=${{ vars.HTTP_PROXY }}
+            export IMAGE_HTTPS_PROXY=${{ vars.HTTPS_PROXY }}
+
+            # Build image using airbyte-ci
+            airbyte-ci connectors --name=$CONNECTOR build
+            
+            # Ensure the dev-tagged image exists before pushing
+            DEV_IMAGE="airbyte/$CONNECTOR:dev"
+            if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "$DEV_IMAGE"; then
+              echo "✅ Found built image: $DEV_IMAGE"
+              docker tag "$DEV_IMAGE" "$IMAGE_NAME"
+              docker push "$IMAGE_NAME"
+            else
+              echo "❌ Error: Image $DEV_IMAGE was not found after build."
+              exit 1
+            fi
+
+            cd ../../../
+
           done
