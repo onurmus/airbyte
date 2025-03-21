@@ -1,7 +1,6 @@
 name: Canonical CD
 
 on:
-  pull_request: #TODO: remove
   push:
     branches:
       - master
@@ -37,10 +36,8 @@ jobs:
         id: detect-changes
         uses: ./.github/actions/detect-changes
         with:
-          base_commit: ${{ github.event.pull_request.base.sha }}
-          head_commit: ${{ github.event.pull_request.head.sha }}
-          # base_commit: ${{ github.event.before }}
-          # head_commit: ${{ github.sha }} #TODO: CHANGE
+          base_commit: ${{ github.event.before }}
+          head_commit: ${{ github.sha }}
 
       - name: Build and push Docker images
         id: build-and-push-images
@@ -78,7 +75,6 @@ jobs:
               exit 1
             fi
             
-            chmod +x .github/scripts/generate_build_customizations.sh
             .github/scripts/generate_build_customizations.sh $CONNECTOR
 
             cd airbyte-integrations/connectors/$CONNECTOR

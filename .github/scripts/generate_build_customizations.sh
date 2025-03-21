@@ -2,7 +2,7 @@
 # Create a build_customization.py file for a given connector. 
 # With that file, the image for the connector will have proxy settings defined.
 
-# Usage: ./generate_build_customizations.sh <path-to-connector-dir>
+# Usage: ./generate_build_customizations.sh <connector-name>
 
 CONNECTOR=$1
 CUSTOMIZATION_FILE="airbyte-integrations/connectors/$CONNECTOR/build_customization.py"
