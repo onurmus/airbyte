@@ -5,21 +5,37 @@ on:
 
 jobs:
   fail_on_protected_path_changes:
-    name: "Check fork do not change protected paths "
+    name: "Check fork does not change protected paths"
     if: github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     steps:
-      - name: Check for changes in protected paths
-        id: check_for_changes_in_protected_paths
-        uses: dorny/paths-filter@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          filters: |
-            protected_paths:
-              - 'airbyte-ci/**'
+          fetch-depth: 0
+      - name: Get list of changed files
+        id: changed-files
+        uses: canonical/actions/changed-files@main
+      - name: Check for changes in protected paths
+        id: check-for-protected-paths
+        run: |
+          PROTECTED_PATHS=("airbyte-ci/" ".github/workflows/")
+          CHANGED_FILES="${{ steps.changed-files.outputs.changed-files }}"
+
+          echo "Changed files: $CHANGED_FILES"
+          echo "$CHANGED_FILES" | tr ' ' '\n' > changed_files.txt
+
+          for path in "${PROTECTED_PATHS[@]}"; do
+            if grep -q "^$path" changed_files.txt; then
+              echo "PROTECTED_PATH_CHANGED=true" >> $GITHUB_ENV
+              break
+            fi
+          done
+          echo "PROTECTED_PATH_CHANGED=${PROTECTED_PATH_CHANGED:-false}" >> $GITHUB_ENV
       - name: Fail if changes in protected paths
-        if: steps.check_for_changes_in_protected_paths.outputs.protected_paths == 'true'
+        if: env.PROTECTED_PATH_CHANGED == 'true'
         run: |
           echo "The fork has changes in protected paths. This is not allowed."
           exit 1
@@ -91,39 +107,10 @@ jobs:
 
       - name: Detect changed connectors
         id: detect-changes
-        env:
-          CI_GIT_BRANCH: ${{ github.head_ref }}
-        run: |
-          # Ensure we have the latest commits from the PR branch
-          git fetch origin "$CI_GIT_BRANCH" --depth=50
-
-          # Ensure we have the exact commit referenced by GITHUB_SHA
-          git fetch origin "$GITHUB_SHA" --depth=1 || echo "⚠️ Warning: Could not fetch GITHUB_SHA, assuming it exists."
-
-          # Determine base commit
-          if [ "${{ github.event_name }}" = "push" ]; then
-            BASE_COMMIT=${{ github.event.before }}
-          else
-            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
-          fi
-
-          echo "BASE_COMMIT=$BASE_COMMIT"
-          echo "GITHUB_SHA=$GITHUB_SHA"
-
-          # Ensure both commits exist in history
-          git log -n 3 --oneline
-
-          # Detect changed connectors
-          CHANGED_DIRS=$(git diff --name-only "$BASE_COMMIT" "$GITHUB_SHA" | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u || true)
-
-          if [[ -z "$CHANGED_DIRS" ]]; then
-            echo "⚠️ No changed connectors detected. Check if GITHUB_SHA is valid."
-          else
-            echo "Changed connectors: $CHANGED_DIRS"
-          fi
-
-          # Store the changed connectors in environment variable
-          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
+        uses: ./.github/actions/detect-changes
+        with:
+          base_commit: ${{ github.event.pull_request.base.sha }}
+          head_commit: ${{ github.event.pull_request.head.sha }}
 
       - name: Test Changed Connectors
         id: test-airbyte-ci
@@ -134,16 +121,18 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
+          # install required packages
           sudo apt update
           sudo apt install python3-setuptools -y
           pip install --upgrade setuptools
 
           git checkout $CI_GIT_BRANCH
 
-          for CONNECTOR in $CONNECTORS_LIST; do
+          for CONNECTOR in ${{ steps.detect-changes.outputs.connectors_list }}; do
             echo "🔄 Running tests for connector: $CONNECTOR"
             cd airbyte-integrations/connectors/$CONNECTOR
 
+            # Run tests for the connector. Skip the tests which are relevant to upstream repository.
             airbyte-ci --disable-update-check --disable-dagger-run connectors --name=$CONNECTOR test \
                 --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation
 
