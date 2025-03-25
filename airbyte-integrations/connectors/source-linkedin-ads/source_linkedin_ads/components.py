@@ -275,18 +275,18 @@ class CampaignAnalyticsDatetimeBasedCursor(AnalyticsDatetimeBasedCursor):
     def stream_slices(self) -> Iterable[StreamSlice]:
         # if campaign is completed use runSchedule.end as endDate
         campaign_current_status = self.partition.extra_fields["status"] 
-        campaign_current_motified_time = self.partition.extra_fields["lastModified"] 
+        campaign_current_modified_time = self.partition.extra_fields["lastModified"] 
         
         if self.parent_state and "extra" in self.parent_state \
             and "status" in self.parent_state["extra"] \
             and "lastModified" in self.parent_state["extra"]:
             parent_extras = self.parent_state["extra"]
             campaign_former_status = parent_extras["status"] 
-            campaign_former_motified_time = parent_extras["lastModified"] 
+            campaign_former_modified_time = parent_extras["lastModified"] 
 
-            if campaign_former_status in ["PAUSED", "REMOVED", "COMPLETED"] \
+            if campaign_former_status in ["PAUSED", "REMOVED", "COMPLETED", "ARCHIVED", "CANCELED"] \
                 and campaign_former_status == campaign_current_status\
-                    and campaign_current_motified_time == campaign_former_motified_time:
+                    and campaign_current_modified_time == campaign_former_modified_time:
                 # meaning nothing changed since last sync, so we do not have to fetch new data for this campaign.
                 return []
 
@@ -297,7 +297,7 @@ class CampaignAnalyticsDatetimeBasedCursor(AnalyticsDatetimeBasedCursor):
             else: # some campaigns may miss scheduling, in this case assume now is the end date.
                 now = datetime.datetime.now(tz=self._timezone)
                 end_datetime = now
-        elif campaign_current_status in ["PAUSED", "REMOVED"]:  
+        elif campaign_current_status in ["PAUSED", "REMOVED", "ARCHIVED", "CANCELED"]:  
             last_modified_date = self.partition.extra_fields["lastModified"]
             end_datetime = datetime.datetime.strptime(last_modified_date, "%Y-%m-%dT%H:%M:%S%z")
         elif campaign_current_status == "DRAFT":  
