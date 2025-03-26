@@ -31,5 +31,6 @@ runs:
         else
           echo "Changed connectors: $CHANGED_DIRS"
           echo "connectors_list=$CHANGED_DIRS" >> $GITHUB_ENV
-          echo "connectors_list_json=$(jq -R . <<< \"$CHANGED_DIRS\" | jq -s .)" >> $GITHUB_OUTPUT
+          JSON=$(echo "$CHANGED_DIRS" | tr ' ' '\n' | jq -R . | jq -s -c .)
+          echo "connectors_list_json=$JSON" >> $GITHUB_OUTPUT
         fi
