@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        dir: ${{ fromJson(needs.get-changed-directories-list.outputs.connectors_list) }}
+        dir: ${{ needs.get-changed-directories-list.outputs.connectors_list }}
 
     steps:
       - name: Checkout fork with full history
