@@ -137,7 +137,7 @@ jobs:
           CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
-          CONNECTOR: ${{ matrix.connector }}
+          CONNECTOR: ${{ matrix.dir }}
         run: |
           if [ -z "${{ matrix.dir }}" ]; then
             echo "No directory specified in matrix.dir, skipping."
