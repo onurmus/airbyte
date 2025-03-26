@@ -89,6 +89,8 @@ jobs:
   get-changed-directories-list:
     name: Get List Of Changed Directories
     runs-on: ubuntu-22.04
+    outputs:
+      connectors_list_json: ${{ steps.detect-changes.outputs.connectors_list_json }}
     steps:
       - name: Checkout fork with full history
         uses: actions/checkout@v4
@@ -110,7 +112,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        dir: ${{ needs.get-changed-directories-list.outputs.connectors_list }}
+        dir: ${{ fromJson(needs.get-changed-directories-list.outputs.connectors_list_json) }}
 
     steps:
       - name: Checkout fork with full history
@@ -135,6 +137,7 @@ jobs:
           CI_GIT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_REF: ${{ github.event.pull_request.head.sha }}
+          CONNECTOR: ${{ matrix.connector }}
         run: |
           if [ -z "${{ matrix.dir }}" ]; then
             echo "No directory specified in matrix.dir, skipping."
@@ -148,8 +151,6 @@ jobs:
 
           git checkout $CI_GIT_BRANCH
 
-          CONNECTOR = ${{ matrix.dir }}
-
           echo "🔄 Running tests for connector: $CONNECTOR"
           cd airbyte-integrations/connectors/$CONNECTOR
 
@@ -157,6 +158,7 @@ jobs:
           airbyte-ci --disable-update-check --disable-dagger-run connectors --name=$CONNECTOR test \
               --skip-step=qa_checks --skip-step=version_inc_check --skip-step=acceptance --skip-step=python_cli_validation
 
+          # return back to root
           cd ../../../
           # Find the latest timestamped report directory inside the CI branch folder
           REPORT_DIR=$(find airbyte-ci/connectors/pipelines/pipeline_reports/airbyte-ci/connectors/test/manual/"$CI_GIT_BRANCH" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
