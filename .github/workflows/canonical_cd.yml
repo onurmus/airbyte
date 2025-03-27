@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  pull_request:
 
 jobs:
   get_changed_directories_list:
@@ -23,7 +24,7 @@ jobs:
           base_commit: ${{ github.event.before }}
           head_commit: ${{ github.sha }}
 
-  build-and-push:
+  build_and_push:
     runs-on: ubuntu-22.04
     if: needs.detect-changes.outputs.connectors_list_json != '[]'
     needs: [get_changed_directories_list]
