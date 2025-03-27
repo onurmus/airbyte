@@ -1,7 +1,7 @@
 name: Canonical Check Protected Paths
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   fail_on_protected_path_changes:
