@@ -1,7 +1,7 @@
 name: Canonical Check Protected Paths
 
 on:
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   fail_on_protected_path_changes:
