@@ -6,8 +6,8 @@ on:
 jobs:
   fail_on_protected_path_changes:
     name: "Check fork does not change protected paths"
-    uses: ./.github/workflows/canonical_check_protected_paths.yaml
-  
+    uses: ./.github/workflows/canonical_check_protected_paths.yml
+
   get_changed_directories_list:
     name: Get List Of Changed Directories
     runs-on: ubuntu-22.04
