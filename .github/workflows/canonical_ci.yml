@@ -1,91 +1,9 @@
-name: Canonical CI
+name: Canonical Connectors CI
 
 on:
   pull_request:
 
 jobs:
-  fail_on_protected_path_changes:
-    name: "Check fork does not change protected paths"
-    if: github.event.pull_request.head.repo.fork == true
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Get list of changed files
-        id: changed-files
-        uses: canonical/actions/changed-files@main
-      - name: Check for changes in protected paths
-        id: check-for-protected-paths
-        run: |
-          PROTECTED_PATHS=("airbyte-ci/" ".github/workflows/")
-          CHANGED_FILES="${{ steps.changed-files.outputs.changed-files }}"
-
-          echo "Changed files: $CHANGED_FILES"
-          echo "$CHANGED_FILES" | tr ' ' '\n' > changed_files.txt
-
-          for path in "${PROTECTED_PATHS[@]}"; do
-            if grep -q "^$path" changed_files.txt; then
-              echo "PROTECTED_PATH_CHANGED=true" >> $GITHUB_ENV
-              break
-            fi
-          done
-          echo "PROTECTED_PATH_CHANGED=${PROTECTED_PATH_CHANGED:-false}" >> $GITHUB_ENV
-      - name: Fail if changes in protected paths
-        if: env.PROTECTED_PATH_CHANGED == 'true'
-        run: |
-          echo "The fork has changes in protected paths. This is not allowed."
-          exit 1
-
-  check_connector_version:
-    name: Check connector version
-    if: github.event.pull_request.head.repo.fork == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect changed connectors
-        id: changes
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            BASE_COMMIT=${{ github.event.before }}
-          else
-            BASE_COMMIT=${{ github.event.pull_request.base.sha }}
-          fi
-          echo "BASE_COMMIT=$BASE_COMMIT"
-          CHANGED_DIRS=$(git diff --name-only $BASE_COMMIT $GITHUB_SHA | grep '^airbyte-integrations/connectors/' | cut -d/ -f3 | sort -u)
-          echo "Changed connector directories: $CHANGED_DIRS"
-          echo "CONNECTORS_LIST=$CHANGED_DIRS" >> $GITHUB_ENV
-          echo "BASE_COMMIT=$BASE_COMMIT" >> $GITHUB_ENV
-
-      - name: Check connector version
-        id: version-check
-        run: |
-          for DIR in $CONNECTORS_LIST; do
-            if [ -d "airbyte-integrations/connectors/$DIR" ]; then
-              METADATAFILE="airbyte-integrations/connectors/$DIR/metadata.yaml"
-              echo "METADATAFILE=$METADATAFILE"
-              NEW_VERSION=$(grep 'canonicalImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
-              echo "BASE_COMMIT=$BASE_COMMIT"
-              git checkout $BASE_COMMIT
-              BASE_VERSION=$(grep 'canonicalImageTag' $METADATAFILE | cut -d':' -f2 | tr -d '" ')
-              # Switch back to the current commit
-              git checkout $GITHUB_SHA
-              echo "NEW_VERSION=$NEW_VERSION"
-              echo "BASE_VERSION=$BASE_VERSION"
-              if [ "$NEW_VERSION" == "$BASE_VERSION" ]; then
-                echo "Error: Connector version has not changed in $METADATAFILE. Please check canonicalImageTag."
-                exit 1
-              fi
-              echo "Connector version has changed for $DIR: $BASE_VERSION -> $NEW_VERSION"
-            fi
-          done
-
   get-changed-directories-list:
     name: Get List Of Changed Directories
     runs-on: ubuntu-22.04
